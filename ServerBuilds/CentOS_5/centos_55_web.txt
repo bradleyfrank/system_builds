@@ -1,0 +1,298 @@
+[size=12pt][b]CentOS 5.4 Web Server[/b][/size]
+
+I wanted experience with a distro that I would be likely to encounter in a business environment, so I chose CentOS, as it's RHEL without the branding and support. There is, however, a lot of community support behind CentOS, and plenty of documentation should problems arise, so it's not a poor choice for someone learning Linux.
+
+I didn't want to pay for a VPS - which is a great way to experiment and learn - but I did have an extra laptop laying around. The great thing about using a laptop as a web server is that if you know you aren't hosting a high traffic site or a ton of media, it works great with a decent home cable internet connection. It also comes with its own battery backup built in! However, you won't have the same resources as a desktop or actual server. Anecdotal evidence told me that perhaps there was a web server with a smaller footprint than Apache. Alternatives included lighttpd, nginx and Cherokee. I settled on Cherokee after some research. I think I was ultimately sold on its web interface.
+
+Throughout this article I list files to edit, but you'll chose the editor. After using vi for so long I just got used to it. Further reading: [url=http://www.uic.edu/depts/accc/software/unixgeneral/vi101.html]http://www.uic.edu/depts/accc/software/unixgeneral/vi101.html[/url].
+
+
+[size=10pt][b]INSTALLATION[/b][/size]
+
+Install how ever you would like, I used the DVD personally.
+
+I select [i]Remove linux partitions on selected drives and create default layout[/i], but you can partition your drive differently if need be.
+
+If you've never set up networking on Red Hat, Cent or Fedora, I actually suggest leaving eth0 as DHCP for now, so you can learn how to set a static IP yourself.
+
+When you get to the package selection screen, I prefer to uncheck everything. I like starting with a mostly blank slate, with just barebone packages installed. Then I select [i]Customize now[/i] to drill down even further.
+[list]
+[li]Applications -> [check] Editors[/li]
+[li]Development -> [check] Development Tools[/li]
+[li]Base System -> [uncheck] Dialup Networking Support[/li]
+[/list]
+
+After the system is done installing, it runs a configuration tool. I've found most defaults work just fine, but I make some adjustments to the firewall:
+[list]
+[li]SELinux: Enforcing[/li]
+[li]Firewall: Enabled[list]
+	[li]Allow incoming: WWW / Secure WWW / SMTP[/li]
+	[li]Services: [uncheck] bluetooth / cups[/li]
+[/list][/li][/list]
+
+Since we're running a web server, the firewall needs to let http and https requests through. This is a no-brainer. If you're asking yourself why don't we open up SSH, it's because we won't be using the standard port. I also kill bluetooth and cups. My laptop doesn't even have bluetooth, and I won't be doing much printing as I don't own a printer. But these two are optional if you really need them.
+
+
+[size=10pt][b]SYSTEM CONFIGURATION[/b][/size]
+
+[size=10pt][u]Connecting to the Network[/u][/size]
+
+First things first: get connected to the network for internet access. I set my router to use class A addresses because I like to be different. You'll need to substitute your information where appropriate. I'm assuming that you have working networking knowledge.
+
+[b]/etc/sysconfig/network-scripts/ifcfg-eth0[/b]
+[code]
+DEVICE=eth0
+BOOTPROTO=none
+HWADDR=
+ONBOOT=yes
+TYPE=Ethernet
+PEERDNS=yes
+IPADDR=10.0.1.200
+NETMASK=255.255.255.0
+GATEWAY=10.0.1.1
+[/code]
+
+Notes:
+[list]
+[li]BOOTPROTO: Boot protocol - If not static, this could be set to "DHCP". I've also seen "static" instead of "none".[/li]
+[li]HWADDR: Hardware address - The MAC address you'll need for your router.[/li]
+[li]PEERDNS: When set to yes, looks for DNS servers in resolv.conf.[/li]
+[/list]
+
+Further reading: [url=http://www.centos.org/docs/5/html/Deployment_Guide-en-US/s1-networkscripts-interfaces.html]http://www.centos.org/docs/5/html/Deployment_Guide-en-US/s1-networkscripts-interfaces.html[/url]
+
+[b]/etc/resolv.conf[/b]
+[code]
+search yourdomain.tld
+nameserver 10.0.1.1
+[/code]
+
+Let's say you'd rather use Google's public DNS than your own router (assuming your router has cached DNS). Multiple DNS entries are possible; the position equals priority. You would enter it as such:
+
+[code]
+nameserver 8.8.8.8
+nameserver 8.8.4.4
+[/code]
+
+[b]/etc/sysconfig/network[/b]
+[code]
+HOSTNAME=yourhostname.yourdomain.tld
+[/code]
+
+[b]/etc/hosts[/b]
+[code]
+127.0.0.1	localhost.yourdomain.tld		localhost
+10.0.1.200	yourhostname.yourdomain.tld		yourhostname
+[/code]
+
+Now run:
+[quote]service network restart[/quote]
+
+
+[size=10pt][u]Adding Repositories and Updating the System[/u][/size]
+
+EPEL (Extra Packages for Enterprise Linux). Further reading: [url=https://fedoraproject.org/wiki/About_EPEL]https://fedoraproject.org/wiki/About_EPEL[/url]
+
+[quote]
+rpm -ivh http://dl.iuscommunity.org/pub/ius/stable/Redhat/5/i386/epel-release-1-1.ius.el5.noarch.rpm
+rpm -ivh http://dl.iuscommunity.org/pub/ius/stable/Redhat/5/i386/ius-release-1-4.ius.el5.noarch.rpm
+[/quote]
+
+http://wiki.centos.org/AdditionalResources/Repositories/CentOSPlus
+
+Now you can update your system:
+[quote]yum update[/quote]
+
+
+[size=10pt][u]Syncing the Clock[/u][/size]
+
+I like to use NTP to keep my clock synced:
+
+[quote]
+yum install ntp
+chkconfig ntpd on
+ntpdate pool.ntp.org
+service ntpd start
+[/quote]
+
+The [i]chkconfig[/i] command tells Cent that you want [i]ntpd[/i] (NTP daemon) to start at boot.
+
+
+[size=10pt][u]Configuring SSH[/u][/size]
+
+SSH comes pre-installed, but we need to configure it. There's two important changes to make. First, we outright ban root from SSH. Second, we obscure SSH by changing the port it listens on. Rule of thumb seems to be anything over port 2000 works, although I advise against 2222. There are many, many other changes you can make to SSH. Some are even more secure than just using these two. Further reading: [url=http://wiki.centos.org/HowTos/Network/SecuringSSH]http://wiki.centos.org/HowTos/Network/SecuringSSH[/url]
+
+[b]/etc/ssh/sshd_config[/b]
+[code]
+PermitRootLogin no
+Port ####
+[/code]
+
+Once the changes are made, the SSH daemon needs to be restarted, and the firewall needs to be updated with the new port:
+
+[quote]
+service sshd restart
+iptables -A INPUT -p tcp --dport #### -j ACCEPT
+service iptables save
+service iptables restart
+[/quote]
+
+This is the [i]iptables[/i] command explained:
+[list]
+[li]-A: append the new rule to the INPUT chain (SSH packets are incoming, hence INPUT)[/li]
+[li]-p: the protocol (SSH uses TCP)[/li]
+[li]--dport: destination port (the new SSH port defined in sshd_config)[/li]
+[li]-j: jump (jump to another rule, or in this case ACCEPT the packets)[/li]
+[/list]
+
+Further reading: [url=http://linux.die.net/man/8/iptables]http://linux.die.net/man/8/iptables[/url]
+
+
+[size=10pt][u]Setting Up A New User[/u][/size]
+
+You should have your own account instead of constantly using root. Plus you'll need it for SSH later on.
+
+[quote]
+adduser username
+passwd username
+[/quote]
+
+[b]/etc/sudoers[/b]
+[code]
+## The COMMANDS section may have other options added to it.
+##
+## Allow root to run any commands anywhere 
+root		ALL=(ALL) 	ALL
+username	ALL=(ALL)	ALL
+[/code]
+
+
+[size=10pt][u]E-mail Yourself Logwatch Logs[/u][/size]
+
+[b]/usr/share/logwatch/default.conf/logwatch.conf[/b]
+[code]
+MailTo = youremailaddress
+Detail = High
+[/code]
+
+
+[size=10pt][b]WEB SERVER[/b][/size]
+
+[size=10pt][u]MySQL[/u][/size]
+
+[quote]
+yum install mysql51-server mysql51-devel
+chkconfig mysqld on
+service mysqld start
+mysql_secure_installation
+[/quote]
+
+
+
+[size=10pt][u]PHP[/u][/size]
+
+[quote]yum install php53 php53-mysql php53-gd php53-odbc php53-mbstring php53-xml php53-ldap php53-imap ImageMagick phpMyAdmin[/quote]
+
+[b]/etc/php.ini[/b]
+[code]
+open_basedir = "/var/www/html/:/usr/share/"
+disable_functions = show_source, system, shell_exec, passthru, exec, phpinfo, proc_open, proc_nice
+expose_php = Off
+error_reporting = E_ALL | E_NOTICE
+display_errors = Off
+log_errors = On
+error_log = /var/log/httpd/php_error_log
+register_globals = Off
+magic_quotes_gpc = Off
+enable_dl = Off
+allow_url_fopen = Off
+[/code]
+
+Security settings, explained:
+[list]
+[li]expose_php: PHP will not write information about itself to HTTP headers. Reduces the amount of information someone can discover about your PHP installation (i.e. version vulnerabilities).[/li]
+[li]open_basedir: Only files inside the given directory will be executed.[/li]
+[li]disable_functions: These functions provide access to system resources, parameters, files and information. You may want to leave out phpinfo at first, in case you want to confirm your settings.[/li]
+[li]display_errors: This prevents error messages from unintentionally revealing information (such as directory structure) about your web server. Instead, errors are sent to an error log on the server.[/li]
+[li]register_globals: Prevents GET and POST variables from being directly available to the entire PHP application.[/li]
+[li]magic_quotes: Mainly it just adds to confusion, but can cause problems with certain code. It's also been deprecated.[/li]
+[li]enable_dl: Disables the loading of a PHP extension at runtime.[/li]
+[li]allow_url_fopen: Only files that reside on the web server can be included; this prevents Remote File Inclusion (RFI) attacks (when someone embeds a URL in an HTTP request hoping that your script is tricked into running theirs).[/li]
+[/list]
+
+[b]/etc/httpd/conf.d/phpMyAdmin.conf[/b]
+[code]
+#<Directory "/usr/share/phpmyadmin">
+#  Order Deny,Allow
+#  Deny from all
+#  Allow from 127.0.0.1
+#</Directory>
+[/code]
+
+
+[size=10pt][u]Apache[/u][/size]
+
+[quote]
+chkconfig httpd on
+service httpd start
+[/quote]
+
+
+
+== Dynamic DNS ==
+
+[9] Dynamic DNS
+yum install ddclient
+
+/etc/ddclient.conf
+---
+protocol=dyndns2
+use=web, web=checkip.dyndns.com, web-skip='IP Address'
+ssl=yes
+server=members.dyndns.org
+login=(login)
+password=(password)
+(dynamic DNS host)
+custom=yes, (static DNS host)
+---
+
+chkconfig ddclient on
+service ddclient start
+
+
+
+== Webmin ==
+
+cd /tmp
+wget http://www.webmin.com/jcameron-key.asc
+rpm --import jcameron-key.asc
+wget http://prdownloads.sourceforge.net/webadmin/webmin-1.510-1.noarch.rpm
+rpm --checksig webmin-1.510-1.noarch.rpm
+[[ webmin.rpm: (sha1) dsa sha1 md5 gpg OK]]
+rpm -ivh webmin*.rpm
+
+
+
+
+
+
+
+__+++___+++ NOTES
+
+reboot command instead of shutdown via SSH
+
+why is postgresql a dependency of postfix
+
+what is postfix-*plus*/CentOS Web Stack
+
+RPM contents!
+
+apache and php error log permissions
+
+php-ldap?
+
+http://sites.google.com/site/ghidit/how-to-2/centos-mail-server-setup-postfix-dovecot-mysql-virtual-users-sasl-postfixadmin-tls
+
+root in sudoers file
+
+postfixadmin superuser account wants an e-mail address - does this correspond to any other account?

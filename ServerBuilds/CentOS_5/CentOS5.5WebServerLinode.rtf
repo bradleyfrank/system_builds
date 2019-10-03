@@ -1,0 +1,395 @@
+{\rtf1\ansi\ansicpg1252\cocoartf1138\cocoasubrtf320
+{\fonttbl\f0\fnil\fcharset0 Verdana;\f1\fmodern\fcharset0 CourierNewPSMT;\f2\fswiss\fcharset0 ArialMT;
+}
+{\colortbl;\red255\green255\blue255;\red0\green0\blue238;}
+{\*\listtable{\list\listtemplateid1\listhybrid{\listlevel\levelnfc23\levelnfcn23\leveljc0\leveljcn0\levelfollow0\levelstartat1\levelspace360\levelindent0{\*\levelmarker \{disc\}}{\leveltext\leveltemplateid1\'01\uc0\u8226 ;}{\levelnumbers;}\fi-360\li720\lin720 }{\listname ;}\listid1}}
+{\*\listoverridetable{\listoverride\listid1\listoverridecount0\ls1}}
+\vieww12820\viewh12240\viewkind1
+\deftab720
+\pard\pardeftab720\ri0
+
+\f0\fs22 \cf0 -- http://wiki.centos.org/\
+-- http://lowfatlinux.com/linux-environment-variables.html\
+\
+\pard\pardeftab720\ri0
+
+\f1 \cf0 echo "HOSTNAME=your-hostname" >> /etc/sysconfig/network\
+hostname your-hostname\
+\
+\pard\pardeftab720\ri0
+
+\f0 \cf0 /etc/hosts\
+\pard\pardeftab720\ri0\sb90\sa90
+
+\f1 \cf0 127.0.0.1		\'a0\'a0localhost.localdomain			localhost\
+\pard\pardeftab720\ri0
+\cf0 your-ip-address	your-hostname.your-domain.tld	your-hostname\
+\
+\pard\pardeftab720\ri0\sb90\sa90
+\cf0 rpm --import\'a0http://mirror.centos.org/centos/RPM-GPG-KEY-CentOS-5\
+\pard\pardeftab720\ri0
+\cf0 rpm --import http://download.fedora.redhat.com/pub/epel/RPM-GPG-KEY-EPEL\
+rpm --import http://rpms.famillecollet.com/RPM-GPG-KEY-remi\
+\
+rpm -ivh http://download.fedora.redhat.com/pub/epel/5/i386/epel-release-5-3.noarch.rpm\
+wget -P\'a0/etc/yum.repos.d http://rpms.famillecollet.com/enterprise/remi.repo\
+\
+\pard\pardeftab720\ri0
+
+\f0 \cf0 -- http://blog.famillecollet.com/pages/Config-en\
+\
+/etc/yum.repos.d/CentOS-Base.repo\
+\pard\pardeftab720\ri0
+
+\f1 \cf0 [base]\
+name=CentOS-$releasever - Base\
+...\
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-5\
+exclude=postfix* php* mysql*\
+\
+#released updates\
+[updates]\
+...\
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-5\
+exclude=postfix* php* mysql*\
+\
+#additional packages that extend functionality of existing packages\
+[centosplus]\
+...\
+enabled=1\
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-5\
+includepkgs=postfix\
+\
+\pard\pardeftab720\ri0
+
+\f0 \cf0 /etc/yum.repos.d/remi.repo\
+\pard\pardeftab720\ri0
+
+\f1 \cf0 name=Les RPM de remi pour Enterprise Linux $releasever - $basearch\
+...\
+enabled=1\
+\
+yum update\
+\
+yum install acl\
+\
+\pard\pardeftab720\ri0
+
+\f0 \cf0 /etc/fstab\
+\pard\pardeftab720\ri0
+
+\f1 \cf0 # <file system> <mount point> \'a0 <type> \'a0<options> \'a0 \'a0 \'a0 <dump> \'a0<pass>\
+/dev/xvda \'a0 \'a0 \'a0 / \'a0 \'a0 \'a0 \'a0 \'a0 \'a0 \'a0 ext3 \'a0 \'a0noatime,errors=remount-ro,acl 0 \'a0 \'a0 \'a0 1\
+\
+\pard\pardeftab720\ri0
+
+\f0 \cf0 --\'a0{\field{\*\fldinst{HYPERLINK "http://centos.org/docs/5/html/Deployment_Guide-en-US/s1-acls-setting.html"}}{\fldrslt \cf2 \ul \ulc2 http://centos.org/docs/5/html/Deployment_Guide-en-US/s1-acls-setting.html}}\
+\pard\pardeftab720\ri0
+\cf2 \ul \ulc2 \
+\pard\pardeftab720\ri0
+
+\f1 \cf0 \ulnone adduser your-username\
+passwd\'a0your-username\
+\
+\pard\pardeftab720\ri0
+
+\f0 \cf0 /etc/sudoers\
+\pard\pardeftab720\ri0
+
+\f1 \cf0 ## Allow root to run any commands anywhere\'a0\
+root			ALL=(ALL)	ALL\
+your-username\'a0\'a0 ALL=(ALL)	ALL\
+\
+\pard\pardeftab720\ri0\sb90\sa90
+
+\f0 \cf0 /etc/ssh/sshd_config\
+\pard\pardeftab720\ri0
+
+\f1 \cf0 Port custom-ssh-port-#\
+PermitRootLogin no\
+\
+\pard\pardeftab720\ri0
+
+\f0 \cf0 -- http://wiki.centos.org/HowTos/Network/SecuringSSH\
+\
+\pard\pardeftab720\ri0
+
+\f1 \cf0 iptables -P INPUT ACCEPT\
+iptables -F\
+iptables -A INPUT -i lo -j ACCEPT\
+iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT\
+iptables -A INPUT -p tcp --dport custom-ssh-port-# -j ACCEPT\
+iptables -A INPUT -p tcp --dport 80 -j ACCEPT\
+iptables -A INPUT -p tcp --dport 443 -j ACCEPT\
+iptables -P INPUT DROP\
+iptables -P FORWARD DROP\
+iptables -P OUTPUT ACCEPT\
+service iptables save\
+\
+\pard\pardeftab720\ri0
+
+\f0 \cf0 -- http://wiki.centos.org/HowTos/Network/IPTables\
+-- http://linux.die.net/man/8/iptables\
+\
+(reboot)\
+\
+\pard\pardeftab720\ri0
+
+\f1 \cf0 setfacl -m u:your-username:rwx /var/www/html/\
+\
+yum install httpd php php-mysql\'a0php-gd\'a0php-mbstring php-mcrypt\'a0php-xml\'a0mysql-server mysql-devel\'a0phpMyAdmin\'a0php-pspell\'a0ImageMagick2\
+\
+\pard\pardeftab720\ri0
+
+\f0 \cf0 -- http://rpms.famillecollet.com/enterprise/5/remi/[arch]\
+\
+\pard\pardeftab720\ri0
+
+\f1 \cf0 touch /var/log/httpd/php_error_log\
+touch /var/www/html/robots.txt\
+\
+\pard\pardeftab720\ri0
+
+\f0 \cf0 --\'a0{\field{\*\fldinst{HYPERLINK "http://www.robotstxt.org/robotstxt.html"}}{\fldrslt \cf2 \ul \ulc2 http://www.robotstxt.org/robotstxt.html}}\
+\pard\pardeftab720\ri0
+\cf2 \ul \ulc2 \
+\pard\pardeftab720\ri0
+
+\f1 \cf0 \ulnone chkconfig httpd on\
+service httpd start\
+\
+\pard\pardeftab720\ri0
+
+\f0 \cf0 (http://www.your-domain.tld is now the Apache2 Test Page)\
+\
+-- http://www.redhat.com/docs/manuals/linux/RHL-9-Manual/ref-guide/s1-apache-config.html\
+\
+\pard\pardeftab720\ri0
+
+\f1 \cf0 chkconfig mysqld on\
+service mysqld start\
+mysql_secure_installation\
+\
+\pard\pardeftab720\ri0
+
+\f0 \cf0 mySQL installation:\
+\pard\tx0\tx600\pardeftab720\li600\fi-360\ri0
+\ls1\ilvl0
+\f2\fs24 \cf0 \uc0\u9679 	
+\f0\fs22 Create new sql root password\
+\ls1\ilvl0
+\f2\fs24 \uc0\u9679 	
+\f0\fs22 Remove anon user: Y\
+\ls1\ilvl0
+\f2\fs24 \uc0\u9679 	
+\f0\fs22 Disallow root login remotely: Y\
+\ls1\ilvl0
+\f2\fs24 \uc0\u9679 	
+\f0\fs22 Remove test db: Y\
+\ls1\ilvl0
+\f2\fs24 \uc0\u9679 	
+\f0\fs22 Reload privileges: Y\
+\pard\pardeftab720\ri0
+\ls1\ilvl0\cf0 \
+\pard\pardeftab720\ri0
+\ls1\ilvl0
+\f1 \cf0 cp /etc/php.ini /etc/php.ini.default\
+\
+\pard\pardeftab720\ri0
+\ls1\ilvl0
+\f0 \cf0 /etc/php.ini\
+\pard\pardeftab720\ri0
+\ls1\ilvl0
+\f1 \cf0 disable_functions = show_source, system, shell_exec, passthru, exec, phpinfo, proc_open, proc_nice\
+expose_php = Off\
+error_log = /var/log/httpd/php_error_log\
+allow_url_fopen = Off\
+date.timezone = America/New_York\
+\
+error_reporting = E_ALL & ~E_DEPRECATED\
+display_errors = Off\
+log_errors = On\
+register_globals = Off\
+magic_quotes_* = Off\
+enable_dl = Off\
+allow_url_include = Off\
+\
+\pard\pardeftab720\ri0
+\ls1\ilvl0
+\f0 \cf0 -- http://www.php.net/manual/en/timezones.php\
+\
+/etc/httpd/conf.d/phpMyAdmin.conf\
+\pard\pardeftab720\ri0
+\ls1\ilvl0
+\f1 \cf0 Alias /phpMyAdmin /usr/share/phpMyAdmin\
+Alias /phpmyadmin /usr/share/phpMyAdmin\
+<Directory /usr/share/phpMyAdmin/>\
+	order deny,allow\
+	deny from all\
+	allow from 127.0.0.1\
+	allow from ::1\
+	allow from\'a0your-public-ip-address\
+</Directory>\
+\
+mysql -u root -p\
+mysql> source /usr/share/phpMyAdmin/scripts/create_tables.sql\
+mysql>\'a0GRANT USAGE ON mysql.* TO 'control-user'@'localhost' IDENTIFIED BY 'password';\
+mysql> GRANT SELECT (\
+	Host, User, Select_priv, Insert_priv, Update_priv, Delete_priv,\
+	Create_priv, Drop_priv, Reload_priv, Shutdown_priv, Process_priv,\
+	File_priv, Grant_priv, References_priv, Index_priv, Alter_priv,\
+	Show_db_priv, Super_priv, Create_tmp_table_priv, Lock_tables_priv,\
+	Execute_priv, Repl_slave_priv, Repl_client_priv\
+	) ON mysql.user TO 'control-user'@'localhost';\
+mysql>\'a0GRANT SELECT ON mysql.db TO 'control-user'@'localhost';\
+mysql> GRANT SELECT ON mysql.host TO 'control-user'@'localhost';\
+\pard\pardeftab720\ri0\sb90\sa90
+\ls1\ilvl0\cf0 mysql> GRANT SELECT (Host, Db, User, Table_name, Table_priv, Column_priv) ON mysql.tables_priv TO 'control-user'@'localhost';\
+\pard\pardeftab720\ri0
+\ls1\ilvl0\cf0 mysql>\'a0GRANT SELECT, INSERT, UPDATE, DELETE ON phpmyadmin.* TO 'control-user'@'localhost';\
+mysql> quit\
+\
+\pard\pardeftab720\ri0
+\ls1\ilvl0
+\f0 \cf0 -- http://wiki.phpmyadmin.net/pma/controluser\
+\
+(http://www.question-defense.com/tools/phpmyadmin-blowfish-secret-generator)\
+\
+/usr/share/phpMyAdmin/config.inc.php\
+\pard\pardeftab720\ri0
+\ls1\ilvl0
+\f1 \cf0 $cfg['blowfish_secret'] = 'your-passphrase';\
+\
+/* User for advanced features */\
+$cfg['Servers'][$i]['controluser'] = 'control-user';\
+$cfg['Servers'][$i]['controlpass'] = 'password';\
+\
+/* Advanced phpMyAdmin features */\
+$cfg['Servers'][$i]['pmadb'] = 'phpmyadmin';\
+$cfg['Servers'][$i]['bookmarktable'] = 'pma_bookmark';\
+$cfg['Servers'][$i]['relation'] = 'pma_relation';\
+$cfg['Servers'][$i]['table_info'] = 'pma_table_info';\
+$cfg['Servers'][$i]['table_coords'] = 'pma_table_coords';\
+$cfg['Servers'][$i]['pdf_pages'] = 'pma_pdf_pages';\
+$cfg['Servers'][$i]['column_info'] = 'pma_column_info';\
+$cfg['Servers'][$i]['history'] = 'pma_history';\
+$cfg['Servers'][$i]['tracking'] = 'pma_tracking';\
+$cfg['Servers'][$i]['designer_coords'] = 'pma_designer_coords';\
+\
+\pard\pardeftab720\ri0
+\ls1\ilvl0
+\f0 \cf0 -- http://wiki.phpmyadmin.net/pma/Config\
+\pard\pardeftab720\ri0
+\ls1\ilvl0
+\f1 \cf0 wget -P /tmp http://downloads.sourceforge.net/project/phpmyadmin/themes/clearview3/3.1/clearview3-3.1.zip\
+unzip -d /usr/share/phpMyAdmin/themes /tmp/clearview3-3.1.zip\
+cp /usr/share/phpMyAdmin/themes/darkblue_orange/img/\{s_sync.png,s_replication.png,eye.png\} /usr/share/phpMyAdmin/themes/clearview3/img/\
+\
+\pard\pardeftab720\ri0
+\ls1\ilvl0
+\f0 \cf0 -- http://www.phpmyadmin.net/home_page/themes.php\
+\
+\pard\pardeftab720\ri0
+\ls1\ilvl0
+\f1 \cf0 service httpd restart\
+\pard\pardeftab720\ri0
+\ls1\ilvl0
+\f0 \cf0 (http://your-domain.tld/phpmyadmin)\
+\
+\pard\pardeftab720\ri0\sb90\sa90
+\ls1\ilvl0
+\f1 \cf0 yum install awstats\
+\pard\pardeftab720\ri0
+\ls1\ilvl0\cf0 cp /etc/awstats/awstats.localhost.localdomain.conf /etc/awstats/awstats.your-domain.tld.conf\
+\
+\pard\pardeftab720\ri0
+\ls1\ilvl0
+\f0 \cf0 /etc/awstats/awstats.your-domain.tld.conf\
+\pard\pardeftab720\ri0\sb90\sa90
+\ls1\ilvl0
+\f1 \cf0 SiteDomain="your-domain.tld"\
+\pard\pardeftab720\ri0
+\ls1\ilvl0\cf0 HostAliases="your-domain.tld localhost 127.0.0.1"\
+BuildReportFormat=xhtml\
+\
+\pard\pardeftab720\ri0
+\ls1\ilvl0
+\f0 \cf0 /etc/httpd/conf.d/awstats.conf\
+\pard\pardeftab720\ri0
+\ls1\ilvl0
+\f1 \cf0 <Directory "/usr/share/awstats/wwwroot">\
+	Options None\
+	AllowOverride None\
+	Order allow,deny\
+	Allow from 127.0.0.1\
+	Allow from your-public-ip-address\
+</Directory>\
+\
+\pard\pardeftab720\ri0
+\ls1\ilvl0
+\f0 \cf0 -- http://awstats.sourceforge.net/docs/awstats_setup.html\
+\
+\pard\pardeftab720\ri0
+\ls1\ilvl0
+\f1 \cf0 /usr/share/awstats/wwwroot/cgi-bin/awstats.pl -update -config=your-domain.tld\
+\
+service httpd restart\
+\pard\pardeftab720\ri0
+\ls1\ilvl0
+\f0 \cf0 (http://www.your-domain.tld/awstats/awstats.pl?config=your-domain.tld)\
+\
+\pard\pardeftab720\ri0
+\ls1\ilvl0
+\f1 \cf0 yum install postfix logwatch logrotate fail2ban\
+\
+chkconfig postfix on\
+service postfix start\
+\
+chkconfig fail2ban on\
+service fail2ban start\
+\
+\pard\pardeftab720\ri0
+\ls1\ilvl0
+\f0 \cf0 -- http://www.fail2ban.org/wiki/index.php/MANUAL_0_8\
+\
+/usr/share/logwatch/default.conf/logwatch.conf\
+\pard\pardeftab720\ri0
+\ls1\ilvl0
+\f1 \cf0 Detail = 5\
+\
+mkdir /var/log/httpd/archive\
+\
+\pard\pardeftab720\ri0
+\ls1\ilvl0
+\f0 \cf0 /etc/logrotate.conf\
+\pard\pardeftab720\ri0
+\ls1\ilvl0
+\f1 \cf0 monthly\
+rotate 6\
+\
+\pard\pardeftab720\ri0
+\ls1\ilvl0
+\f0 \cf0 /etc/logrotate.d/httpd\
+\pard\pardeftab720\ri0
+\ls1\ilvl0
+\f1 \cf0 /var/log/httpd/*log \{\
+	missingok\
+	notifempty\
+	daily\
+	rotate 7\
+	olddir /var/log/httpd/archive\
+	sharedscripts\
+	prerotate\
+	 \'a0 \'a0/usr/share/awstats/wwwroot/cgi-bin/awstats.pl -update -config=your-domain.tld\
+	endscript\
+	postrotate\
+	 \'a0 \'a0/sbin/service httpd reload > /dev/null 2>/dev/null || true\
+	endscript\
+\}\
+\
+\pard\pardeftab720\ri0
+\ls1\ilvl0
+\f0 \cf0 -- http://linux.die.net/man/8/logrotate\
+-- http://linuxers.org/howto/howto-use-logrotate-manage-log-files\
+-- http://www.softpanorama.org/Logs/Log_rotation/logrotate.shtml\
+}

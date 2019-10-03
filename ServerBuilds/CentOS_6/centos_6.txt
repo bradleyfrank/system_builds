@@ -1,0 +1,386 @@
+INSTALLATION
+
+Making install media: http://red.ht/Oz9tr9
+Media downloads: http://mirrors.seas.harvard.edu/centos/6/isos/
+Disk partitioning: http://red.ht/Oz9Em7
+
+Net install URL: http://mirrors.seas.harvard.edu/centos/6/os/x86_64/
+
+Partition your drive as needed, or use one of the default settings. Select "Minimal" and then select "Customize now". Under "Base" select all packages in the "Base" sub-category.
+
+
+SYSTEM CONFIGURATION
+
+Connecting to the Network
+
+Consistent network device naming: http://red.ht/UDhcb4
+Ethernet interfaces: http://red.ht/142Y4ZI
+Configuration of /etc/sysconfig/network: http://red.ht/VsLopY
+
+Run ifconfig to find the network device name and MAC address. Use the MAC address to give your server a static IP address in order to setup port forwarding on your router (port 80 is for web traffic, and port 443 is for SSL/HTTPS). Make the following changes to your network device configuration file, substituting your own network information.
+
+/etc/sysconfig/network-scripts/ifcfg-[device]
+DEVICE="[device]"
+BOOTPROTO="none"
+ONBOOT="yes
+NETMASK="255.255.255.0"
+IPADDR="10.0.1.27"
+USERCTL="no"
+
+/etc/resolv.conf
+search [domain.tld]
+nameserver [DNS address]
+nameserver [DNS address]
+
+/etc/sysconfig/network
+NETWORKING=yes
+HOSTNAME=[hostname].[domain.tld]
+GATEWAY=[Gateway]
+
+# echo "[IP Address] [hostname].[domain.tld] [hostname]" >> /etc/hosts
+# service network restart
+
+
+Adding Users
+
+# groupadd webadmin
+# useradd -G webadmin [username]
+# passwd [username]
+
+(# usermod -a -G webadmin [username])
+
+# visudo
+root		ALL=(ALL)	ALL
+%webadmin	ALL=(ALL)	ALL
+
+
+Adding Repositories and Updating the System
+
+Extra Packages for Enterprise Linux: https://fedoraproject.org/wiki/About_EPEL
+Les RPM de Remi: http://blog.famillecollet.com/pages/English-site-introduction
+What is MariaDB 5.5: https://kb.askmonty.org/en/what-is-mariadb-55/
+Setting up MariaDB Repositories: https://downloads.mariadb.org/mariadb/repositories/
+
+# rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-6
+# rpm --import https://fedoraproject.org/static/0608B895.txt
+# rpm --import http://rpms.famillecollet.com/RPM-GPG-KEY-remi
+# rpm --import https://yum.mariadb.org/RPM-GPG-KEY-MariaDB
+
+# rpm -ivh http://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm
+# rpm -ivh http://rpms.famillecollet.com/enterprise/remi-release-6.rpm
+# wget -P /etc/yum.repos.d/ http://fedora-sabnzbd.dyndns.org/SABnzbd/RHEL-CentOS/SABnzbd-6.repo
+# touch /etc/yum.repos.d/MariaDB.repo
+# yum install centos-release-cr
+
+/etc/yum.repos.d/CentOS-CR.repo
+[cr]
+includepkgs=tbb*
+
+/etc/yum.repos.d/MariaDB.repo
+[mariadb]
+name = MariaDB
+baseurl = http://yum.mariadb.org/5.5/centos6-x86
+gpgkey=https://yum.mariadb.org/RPM-GPG-KEY-MariaDB
+gpgcheck=1
+
+We want PHP packages from Remi, not CentOS, so we'll make changes to reflect that.
+
+/etc/yum.repos.d/CentOS-Base.repo
+[base]
+name=CentOS-$releasever - Base
+mirrorlist=http://mirrorlist.centos.org/?release=$releasever&arch=$basearch&repo=os
+#baseurl=http://mirror.centos.org/centos/$releasever/os/$basearch/
+gpgcheck=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-6
+exclude=php* mysql*
+
+#released updates 
+[updates]
+name=CentOS-$releasever - Updates
+mirrorlist=http://mirrorlist.centos.org/?release=$releasever&arch=$basearch&repo=updates
+#baseurl=http://mirror.centos.org/centos/$releasever/updates/$basearch/
+gpgcheck=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-6
+exclude=php* mysql*
+
+Enable the Remi repo, as it comes disabled by default.
+
+/etc/yum.repos.d/remi.repo
+[remi]
+name=Les RPM de remi pour Enterprise Linux $releasever - $basearch
+#baseurl=http://rpms.famillecollet.com/enterprise/$releasever/remi/$basearch/
+mirrorlist=http://rpms.famillecollet.com/enterprise/$releasever/remi/mirror
+enabled=1
+gpgcheck=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-remi
+failovermethod=priority
+includepkgs=php*
+
+# yum update
+# wget -P /tmp/ http://download1.rpmfusion.org/nonfree/el/updates/6/x86_64/unrar-4.0.7-1.el6.x86_64.rpm
+# yum localinstall /tmp/unrar-4.0.7-1.el6.x86_64.rpm
+# rpm -e --nodeps mysql-libs
+# yum install acl git ntp wget unzip mysql-libs logwatch
+
+
+A Note on Runlevels
+
+Enterprise Linux runlevels: http://red.ht/RzdpNf
+
+chkconfig is used to start programs at boot. Use the following command to verify at what runlevels an individual program starts: chkconfig [service] --list.
+
+
+# yum install SABnzbd
+# chkconfig —levels 345 SABnzbd on
+
+/etc/fstab
+root / ext4 defaults 1 1
+
+# mount -o remount,acl /
+# chkconfig ntpd on
+# ntpdate pool.ntp.org
+# service ntpd start
+
+
+Configuring SSH
+
+/etc/ssh/sshd_config
+Port 1632
+PermitRootLogin no
+
+
+Configuring Firewall
+
+IPTables: http://wiki.centos.org/HowTos/Network/IPTables
+
+# iptables -P INPUT ACCEPT
+# iptables -F
+# iptables -A INPUT -i lo -j ACCEPT
+# iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+# iptables -A INPUT -p tcp --dport 1632 -j ACCEPT
+# iptables -A INPUT -p tcp --dport 80 -j ACCEPT
+# iptables -A INPUT -p tcp --dport 443 -j ACCEPT
+# iptables -A INPUT -p tcp --dport 9090 -j ACCEPT
+# iptables -P INPUT DROP
+# iptables -P FORWARD DROP
+# iptables -P OUTPUT ACCEPT
+# service iptables save
+
+
+Install Apache
+
+The robots.txt file: http://www.robotstxt.org/robotstxt.html
+ACLs: http://idolinux.blogspot.com/2008/12/linux-acls.html
+About mod_evasive: http://www.zdziarski.com/blog/?page_id=442
+
+# yum install httpd mod_evasive
+
+/etc/httpd/conf.d/mod_evasive.conf
+DOSWhitelist   127.0.0.1
+DOSWhitelist   192.168.1.*
+
+# chkconfig —levels 345 httpd on
+# service httpd start
+# mkdir /var/log/httpd/archive
+
+# chmod g+s /var/www/html
+# setfacl -m g:webadmin:rwx /var/www/html
+# touch /var/www/html/robots.txt
+# wget -P /var/www/html/ http://www.sourceopen.com/favicon.ico
+
+You can access your site at http://www.[domain.tld]; if Apache is running, you'll see the default Apache landing page. If you prefer a blank page:
+	# touch /var/www/html/index.html
+Now that Apache has created a root web folder, we need to give the webadmin group access to read, write and modify that directory (i.e. so you can use SFTP to upload files).
+
+
+Install PHP
+
+PHP Security: http://www.php.net/manual/en/security.php
+
+# yum install php php-gd php-mbstring php-mcrypt php-xml php-pspell php-mysqlnd
+# touch /var/log/httpd/php_error_log
+# setfacl -m u:apache:rw /var/log/httpd/php_error_log
+# cp /etc/php.ini /etc/php.ini.orig
+
+/etc/php.ini
+disable_functions = show_source, system, shell_exec, passthru, exec, phpinfo, proc_open, proc_nice
+expose_php = Off
+error_reporting = E_ALL & ~E_DEPRECATED & ~E_STRICT
+display_errors = Off
+log_errors = On
+error_log = /var/log/httpd/php_error_log
+enable_dl = Off
+allow_url_* = Off
+date.timezone = America/New_York
+
+
+Installing MariaDB (MySQL)
+
+Compatibility with MySQL: https://kb.askmonty.org/en/mariadb-vs-mysql-compatibility/
+Best practices: http://ronaldbradford.com/blog/mysql-best-practices-user-security-2010-05-21/
+
+# yum install MariaDB-server MariaDB-client
+# chkconfig --levels 345 mysql on
+# service mysql start
+# mysql_secure_installation
+	- Enter current password for root (enter for none): [enter]
+	- Set root password? [Y/n] Y
+	- Remove anonymous users? [Y/n] Y
+	- Disallow root login remotely? [Y/n] Y
+	- Remove test database and access to it? [Y/n] Y
+	- Reload privilege tables now? [Y/n] Y
+
+# yum install phpMyAdmin
+
+/etc/httpd/conf.d/phpMyAdmin.conf
+#Alias /phpMyAdmin /usr/share/phpMyAdmin
+#Alias /phpmyadmin /usr/share/phpMyAdmin
+Alias /maria /usr/share/phpMyAdmin
+
+<Directory /usr/share/phpMyAdmin/>
+   <IfModule mod_authz_core.c>
+     # Apache 2.4
+     Require local
+   </IfModule>
+   <IfModule !mod_authz_core.c>
+     # Apache 2.2
+     Order Deny,Allow
+     Deny from All
+     Allow from [private/public ip]
+     Allow from 127.0.0.1
+     Allow from ::1
+   </IfModule>
+</Directory>
+
+# mysql -u root -p
+mysql> RENAME USER 'root'@'localhost' to 'mariadmin'@'localhost';
+mysql> RENAME USER 'root'@'127.0.0.1' to 'mariadmin'@'127.0.0.1';
+mysql> RENAME USER 'root'@'::1' to 'mariadmin'@'::1';
+
+mysql> source /usr/share/phpMyAdmin/examples/create_tables.sql
+mysql> GRANT USAGE ON mysql.* TO 'ctrluser'@'localhost' IDENTIFIED BY 'ctrlPass%';
+mysql> GRANT SELECT (
+	Host, User, Select_priv, Insert_priv, Update_priv, Delete_priv,
+	Create_priv, Drop_priv, Reload_priv, Shutdown_priv, Process_priv,
+	File_priv, Grant_priv, References_priv, Index_priv, Alter_priv,
+	Show_db_priv, Super_priv, Create_tmp_table_priv, Lock_tables_priv,
+	Execute_priv, Repl_slave_priv, Repl_client_priv
+	) ON mysql.user TO 'ctrluser'@'localhost';
+mysql> GRANT SELECT ON mysql.db TO 'ctrluser'@'localhost';
+mysql> GRANT SELECT ON mysql.host TO 'ctrluser'@'localhost';
+mysql> GRANT SELECT (Host, Db, User, Table_name, Table_priv, Column_priv) ON mysql.tables_priv TO 'ctrluser'@'localhost';
+mysql> GRANT SELECT, INSERT, UPDATE, DELETE ON phpmyadmin.* TO 'ctrluser'@'localhost';
+
+mysql> CREATE USER 'bfrank'@'localhost' IDENTIFIED BY  '[password]';
+mysql> GRANT USAGE ON * . * TO  'bfrank'@'localhost' IDENTIFIED BY  '[password]' WITH MAX_QUERIES_PER_HOUR 0 MAX_CONNECTIONS_PER_HOUR 0 MAX_UPDATES_PER_HOUR 0 MAX_USER_CONNECTIONS 0;
+mysql> CREATE DATABASE IF NOT EXISTS  `bfrank`;
+mysql> GRANT ALL PRIVILEGES ON  `bfrank` . * TO  'bfrank'@'localhost';
+mysql> quit
+
+http://www.question-defense.com/tools/phpmyadmin-blowfish-secret-generator
+
+# cp /etc/phpMyAdmin/config.inc.php /etc/phpMyAdmin/config.inc.php.orig
+
+/etc/phpMyAdmin/config.inc.php
+$cfg['blowfish_secret'] = '[passphrase]';
+
+/* User used to manipulate with storage */
+// $cfg['Servers'][$i]['controlhost'] = '';
+$cfg['Servers'][$i]['controluser'] = '[control user]';
+$cfg['Servers'][$i]['controlpass'] = '[password]';
+
+/* Storage database and tables */
+$cfg['Servers'][$i]['pmadb'] = 'phpmyadmin';
+$cfg['Servers'][$i]['bookmarktable'] = 'pma_bookmark';
+$cfg['Servers'][$i]['relation'] = 'pma_relation';
+$cfg['Servers'][$i]['table_info'] = 'pma_table_info';
+$cfg['Servers'][$i]['table_coords'] = 'pma_table_coords';
+$cfg['Servers'][$i]['pdf_pages'] = 'pma_pdf_pages';
+$cfg['Servers'][$i]['column_info'] = 'pma_column_info';
+$cfg['Servers'][$i]['history'] = 'pma_history';
+$cfg['Servers'][$i]['tracking'] = 'pma_tracking';
+$cfg['Servers'][$i]['designer_coords'] = 'pma_designer_coords';
+$cfg['Servers'][$i]['userconfig'] = 'pma_userconfig';
+$cfg['Servers'][$i]['recent'] = 'pma_recent';
+
+
+Installing Extras
+
+# yum install awstats
+# cp /etc/awstats/awstats.localhost.localdomain.conf /etc/awstats/awstats.www.[domain.tld].conf
+# cp /etc/httpd/conf.d/awstats.conf /etc/httpd/conf.d/awstats.conf.orig
+
+/etc/awstats/awstats.www.[domain.tld].conf
+SiteDomain="[domain.tld]"
+HostAliases="[domain.tld] localhost 127.0.0.1 REGEX[^.*[domain.tld]$]"
+BuildReportFormat=xhtml
+SkipFiles="robots.txt$ favicon.ico$ REGEX[^\/maria]"
+
+/etc/httpd/conf.d/awstats.conf
+<Directory "/usr/share/awstats/wwwroot">
+    Options None
+    AllowOverride None
+    Order deny,allow
+    Deny from all
+    Allow from [private/public ip]
+    Allow from 127.0.0.1
+</Directory>
+
+# mv /etc/logrotate.d/httpd /etc/logrotate.d/httpd.orig
+# touch /etc/logrotate.d/httpd
+
+/etc/logrotate.d/httpd
+/var/log/httpd/*log {
+    missingok
+    notifempty
+    daily
+    rotate 7
+    olddir /var/log/httpd/archive
+    sharedscripts
+    prerotate
+        /usr/share/awstats/wwwroot/cgi-bin/awstats.pl -update -config=www.[domain.tld]
+    endscript
+    postrotate
+        /sbin/service httpd reload > /dev/null 2>/dev/null || true
+    endscript
+}
+
+# /usr/share/awstats/wwwroot/cgi-bin/awstats.pl -update -config=www.[domain.tld]
+# service httpd restart
+
+http://www.[domain.tld]/awstats/awstats.pl?config=www.[domain.tld]
+
+
+Installing DokuWiki: https://www.dokuwiki.org/install:fedora
+
+# yum install dokuwiki dokuwiki-selinux ImageMagick-last
+# cp /etc/httpd/conf.d/dokuwiki.conf /etc/httpd/conf.d/dokuwiki.conf.orig
+# vim /etc/httpd/conf.d/dokuwiki.conf
+
+Alias /wiki /usr/share/dokuwiki
+
+<Directory /usr/share/dokuwiki>
+        Options +FollowSymLinks
+        Order Allow,Deny
+        Allow from all
+</Directory>
+
+# wget -P /usr/share/dokuwiki/lib/plugins/ http://github.com/downloads/cpjobling/plugin-cli/plugin-cli.zip
+# unzip /usr/share/dokuwiki/lib/plugins/plugin-cli.zip && mv plugin-cli cli && rm -f plugin-cli.zip
+# mv /etc/dokuwiki/local.php /etc/dokuwiki/local.php.orig
+# touch /etc/dokuwiki/local.php
+
+$conf['title'] = 'FranklyBrad Wiki';
+$conf['license'] = 'publicdomain';
+$conf['recent'] = 0;
+$conf['breadcrumbs'] = 0;
+$conf['youarehere'] = 1;
+$conf['typography'] = '0';
+$conf['useacl'] = 1;
+$conf['superuser'] = '@admin';
+$conf['manager'] = '@manager';
+$conf['disableactions'] = 'backlink,recent,register,subscribe,unsubscribe';
+$conf['remoteuser'] = 'admin';
+$conf['userewrite'] = '2';
+
+# echo "bfrank:21232f297a57a5a743894a0e4a801fc3:Brad Frank:bradley.frank@gmail.com:admin" >> /etc/dokuwiki/users.auth.php

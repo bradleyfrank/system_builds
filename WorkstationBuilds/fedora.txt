@@ -1,0 +1,43 @@
+====== Fedora 16 Verne ======
+
+
+===== Software =====
+==== Cinnamon ====
+<code>curl http://repos.fedorapeople.org/repos/leigh123linux/cinnamon/fedora-cinnamon.repo -o /etc/yum.repos.d/fedora-cinnamon.repo
+sudo yum install cinnamon</code>
+
+==== VirtualBox ====
+<code>curl http://download.virtualbox.org/virtualbox/rpm/fedora/virtualbox.repo -o /etc/yum.repos.d/virtualbox.repo
+sudo yum install gcc dkms VirtualBox*
+sudo /etc/init.d/vboxdrv setup</code>
+([[https://www.virtualbox.org/wiki/Linux_Downloads | Reference]])
+
+==== Email; Calendaring; IM ====
+<code>sudo yum install thunderbird* pidgin
+sudo yum remove empathy</code> ([[https://addons.mozilla.org/en-US/thunderbird/addon/exchange-20072010-calendar-/ | Exchange plugin for Lightning]])
+
+==== Dropbox ====
+  - Install Dropbox repository
+  - Install Dropbox: <code>sudo yum install nautilus-dropbox</code>
+([[http://forums.dropbox.com/topic.php?id=29809 | Reference]])
+
+
+==== Flash ====
+  - Install Adobe Flash repository: <code>su -c 'yum install http://linuxdownload.adobe.com/linux/x86_64/adobe-release-x86_64-1.0-1.noarch.rpm'</code>
+  - Import GPG key: <code>su -c 'rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-adobe-linux'</code>
+  - Install Flash: <code>su -c 'yum install flash-plugin'</code>
+  - Enable in browsers (i.e. about:plugins)
+
+([[http://fedoraproject.org/wiki/Flash | Reference]])
+===== Tweaks =====
+==== Fonts ====
+<code>sudo yum install mscore-fonts</code>
+
+==== Re-map "Move to Trash" key binding ====
+  - Enable changeable key bindings: <code>gsettings set org.gnome.desktop.interface can-change-accels true</code>
+  - With the mouse hovering over the "Move to Trash" option, hit the Delete key twice.
+  - Disable changeable key bindings: <code>gsettings set org.gnome.desktop.interface can-change-accels false</code>
+([[http://www.andrehonsberg.com/article/get-default-delete-key-behavior-in-fedora-15-with-gnome-3 | Reference ]])
+===== References =====
+  - [[http://docs.fedoraproject.org/en-US/Fedora/16/html/Installation_Guide/s2-diskpartrecommend-x86.html | Recommended Partitioning Scheme]]
+  - [[http://www.my-guides.net/en/guides/linux/240-fedora-16-post-installation-guide | Post-Install Guide]]

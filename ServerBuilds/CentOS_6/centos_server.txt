@@ -1,0 +1,236 @@
+
+====== Backup/NAS/Web Server (CentOS 6) ======
+
+===== Initial Setup =====
+
+==== Networking ====
+
+=== Set Static IP ===
+
+  - Edit ''/etc/sysconfig/network-scripts/ifcfg-<device>'' <code>
+DEVICE="p2p1"
+HWADDR="00:12:3F:FA:D1:45"
+BOOTPROTO=none
+ONBOOT=yes
+TYPE=Ethernet
+PEERDNS=yes
+IPADDR=192.168.1.10
+NETMASK=255.255.255.0
+GATEWAY=192.168.1.1
+</code>
+    * BOOTPROTO: Boot protocol - "DHCP" or "none" (for static)
+    * PEERDNS: "yes" = looks for DNS servers in ''/etc/resolv.conf''
+  - Edit ''/etc/resolv.conf'' <code>
+nameserver 192.168.1.1
+</code>
+  - Edit ''/etc/hosts'' <code>
+192.168.1.10	whiskey.franklybrad.com		    whiskey
+127.0.0.1	    localhost localhost.localdomain	localhost4 localhost4.localdomain4
+::1		        localhost localhost.localdomain	localhost6 localhost6.localdomain6
+</code>
+  - Edit ''/etc/sysconfig/network'' <code>
+NETWORKING=yes
+HOSTNAME=whiskey.franklybrad.com
+</code>
+
+service network restart
+
+
+
+
+==== Repositories and Updates ====
+
+  - Add user: <code>
+# adduser <name>
+# passwd <name>
+# visudo
+</code> <code>
+## Allow root to run any commands anywhere
+root           ALL=(ALL)       ALL
+<name>         ALL=(ALL)       ALL
+</code>
+
+http://www.if-not-true-then-false.com/2010/yum-remove-repo-repository-yum-disable-repo-repository/
+http://yum.postgresql.org/repopackages.php
+
+  - Install repositories <code>
+# rpm --import http://mirror.centos.org/centos/RPM-GPG-KEY-CentOS-6
+# rpm -ivh http://mirror.steadfast.net/epel/6/i386/epel-release-6-7.noarch.rpm
+# rpm -ivh http://yum.postgresql.org/9.1/redhat/rhel-6-i386/pgdg-centos91-9.1-4.noarch.rpm
+</code>
+  - Configure ''/etc/yum.repos.d/CentOS-Base.repo'' <code>
+[base]
+exclude=phpPgAdmin postgresql*
+
+[updates]
+exclude=phpPgAdmin postgresql*
+</code>
+  - Update the system <code># yum update</code>
+
+==== Clock Synchronization ====
+
+  - Install NTP: <code>
+# <code># yum install ntp
+# chkconfig ntpd on
+# service ntpd start
+</code>
+===== Security =====
+
+==== SSH ====
+
+  - Configure ''/etc/ssh/sshd_config'' <code>
+Port <ssh port #>
+PermitRootLogin no
+</code>
+
+==== Firewall ====
+
+  - Reset the current ruleset <code>
+# iptables -P INPUT ACCEPT
+# iptables -F</code>
+  - Accept local and previously established connections <code>
+# iptables -A INPUT -i lo -j ACCEPT
+# iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+</code>
+  - Only accept HTTP/S and SSH connections <code>
+# iptables -A INPUT -p tcp --dport <ssh port #> -j ACCEPT
+# iptables -A INPUT -p tcp --dport 80 -j ACCEPT
+# iptables -A INPUT -p tcp --dport 443 -j ACCEPT
+</code>
+  - Reject all other incoming and forwarding connections <code>
+# iptables -P INPUT DROP
+# iptables -P FORWARD DROP
+</code>
+  - Accept outgoing connections <code># iptables -P OUTPUT ACCEPT</code>
+  - Save and restart iptables <code>
+# service iptables save
+# service iptables restart
+</code>
+
+Source: http://wiki.centos.org/HowTos/Network/IPTables
+
+==== Secure /tmp ====
+
+  - Configure ''/etc/fstab'' <code>tmpfs                   /tmp                         tmpfs   defaults,noexec,nosuid        0 0</code>
+  - Remount /tmp <code># mount -o remount /tmp</code>
+
+
+===== Web Services =====
+
+==== Apache ====
+
+  - Install Apache <code>
+# yum install httpd
+# chkconfig httpd on
+# service httpd start
+</code>
+  - Create robots file <code># touch /var/www/html/robots.txt</code>
+
+=== Access Control Lists ===
+
+  - Install acl <code># yum install acl</code>
+  - Configure ''/etc/fstab'' <code>/dev/mapper/VolGroup-lv_root /                       ext4    defaults,acl    1 1</code>
+  - Set permissions <code># setfacl -m u:<name>:rwx /var/www/html/</code>
+  - Refresh mount flags <code># mount -o remount</code>
+
+==== PHP ====
+
+  - Install PHP and modules <code># yum install php php-mcrypt php-pgsql php-gd php-mbstring php-xml ImageMagick</code>
+  - Create error log <code># touch /var/log/httpd/php_error_log</code>
+  - Edit ''/etc/php.ini'' <code>
+disable_functions = show_source, system, shell_exec, passthru, exec, phpinfo, proc_open, proc_nice
+expose_php = Off
+error_reporting = E_ALL | E_STRICT
+display_errors = Off
+log_errors = On
+error_log = /var/log/httpd/php_error_log
+register_globals = Off
+magic_quotes_* = Off
+enable_dl = Off
+allow_url_fopen = Off
+date.timezone = America/New_York
+</code>
+
+==== Postgres ====
+
+  - Install Postgres and modules <code># yum install postgresql91-server
+# service postgresql-9.1 initdb
+# service postgresql-9.1 start
+# chkconfig postgres-9.1 on</code>
+
+  - Edit ''/etc/httpd/conf.d/phpPgAdmin.conf'' <code>
+Alias /pgadmin /usr/share/phpPgAdmin
+
+<Directory /pgadmin>
+   order deny,allow
+   deny from all
+   allow from 192.168.1.1/24
+   allow from 127.0.0.1
+   allow from ::1
+</Directory>
+</code>
+
+http://snozberry.org/blog/2012/04/19/install-slash-configure-postgresql-on-centos-6/
+
+ident -> md5
+vim /var/lib/pgsql/9.1/data/pg_hba.conf
+
+sudo su - postgres
+createuser -P
+Enter name of role to add: root
+Enter password for new role: 
+Enter it again: 
+Shall the new role be a superuser? (y/n) y
+exit
+
+
+yum install wget
+wget -P /tmp/ http://www.splitbrain.org/_media/projects/dokuwiki/dokuwiki-2012-01-25b.tgz
+tar xzf /tmp/dokuwiki*
+mv /tmp/dokuwiki-2012-01-25b /var/www/html/wiki
+
+
+http://wiki.apache.org/httpd/13PermissionDenied
+chcon -Rv --type=httpd_sys_content_t /html
+
+
+==== MySQL ====
+
+  - Install MySQL and modules <code># yum install mysql mysql-server mysql-devel
+# chkconfig mysqld on
+# service mysqld start
+# mysql_secure_installation</code>
+    * mySQL installation:
+      * Remove anon user: Y
+      * Disallow root login remotely: Y
+      * Remove test db: Y
+      * Reload privileges: Y
+
+==== phpMyAdmin ====
+
+  - Install phpMyAdmin <code># yum install phpMyAdmin firefox</code>
+  - Edit ''/etc/httpd/conf.d/phpmyadmin.conf'' <code>
+<Directory /usr/share/phpMyAdmin/>
+   order deny,allow
+   deny from all
+   allow from <network>/24
+   allow from 127.0.0.1
+   allow from ::1
+</Directory>
+</code>
+  - Add control user <code># mysql -u root -p
+mysql> source /usr/share/phpMyAdmin/scripts/create_tables.sql
+mysql> GRANT USAGE ON mysql.* TO 'control-user'@'localhost' IDENTIFIED BY 'password';
+mysql> GRANT SELECT (
+	Host, User, Select_priv, Insert_priv, Update_priv, Delete_priv,
+	Create_priv, Drop_priv, Reload_priv, Shutdown_priv, Process_priv,
+	File_priv, Grant_priv, References_priv, Index_priv, Alter_priv,
+	Show_db_priv, Super_priv, Create_tmp_table_priv, Lock_tables_priv,
+	Execute_priv, Repl_slave_priv, Repl_client_priv
+	) ON mysql.user TO 'control-user'@'localhost';
+mysql> GRANT SELECT ON mysql.db TO 'control-user'@'localhost';
+mysql> GRANT SELECT ON mysql.host TO 'control-user'@'localhost';
+mysql> GRANT SELECT (Host, Db, User, Table_name, Table_priv, Column_priv) ON mysql.tables_priv TO 'control-user'@'localhost';
+mysql> GRANT SELECT, INSERT, UPDATE, DELETE ON phpmyadmin.* TO 'control-user'@'localhost';
+mysql> quit
+</code>

@@ -1,0 +1,119 @@
+====== Linux Mint Debian Edition Installation ======
+===== Pre-Install =====
+
+==== Media ====
+[[http://www.linuxmint.com/download_lmde.php|Linux Mint Debian Edition (x86_64) 201109 Gnome]]
+
+==== Hard Drive Setup ====
+Mainboard: Gigabyte GA-P55-USB3 [[http://www.gigabyte.com/products/product-page.aspx?pid=3440#manual|(Manual)]]
+
+=== Hardware & Software Layout ===
+| DVD-RW (Red) | 80GB (Blue) \\ /dev/sda |
+| Hitatchi 2TB (UV Blue) \\ /dev/sde | OCZ 32GB SSD (Orange) \\ /dev/sdb |
+| Hitatchi 2TB (UV Blue) \\ /dev/sdf | Hitatchi 2TB (UV Blue) \\ /dev/sdd |
+| WDC 2TB  (UV Blue) \\ /dev/sdg | Kingston 64GB SSD (Orange) \\ /dev/sdc |
+
+=== Mainboard & BIOS Layout ===
+| SATA_6 \\ 4 MASTER | SATA_7 \\ 5 MASTER |
+| SATA_3 \\ 1 SLAVE | SATA_0 \\ 0 MASTER |
+| SATA_4 \\ 2 MASTER | SATA_1 \\ 1 MASTER |
+| SATA_5 \\ 3 MASTER | SATA_2 \\ 0 SLAVE |
+
+===== Install =====
+
+  - Installed Windows.
+  - Installed LMDE.
+  - Installed GRUB2 to boot disk.
+
+==== Partitioning ====
+  * Home: Will mount /home to a RAID array later.
+  * Boot
+  * Swap: Rule of thumb is 1.5x or 2x memory. Desktop does not hibernate.
+  * Root: Used the remaining space on the drive.
+
+^ OS ^ Drive ^ Partition ^ Size ^ Filesystem ^ Mount Point ^ 
+| Windows 7 | 64GB SSD | /dev/sdc1 | 100.00 MiB | NTFS | system partition (boot) |
+| Windows 7 | 64GB SSD | /dev/sdc2 | 59.53 GiB | NTFS | operating system |
+| GRUB | 32GB SSD | /dev/sdb | 29.82 GiB | n/a | boot loader |
+| LMDE | 32GB SSD | /dev/sdb1 | 256.00 MiB | ext4 | /boot |
+| LMDE | 32GB SSD | /dev/sdb2 | 3.91 GiB | swap | swap |
+| LMDE | 32GB SSD | /dev/sdb3 | 25.66 GiB | ext4 | / |
+===== Post-Install =====
+
+==== Drivers ====
+=== Video (nVidia) ===
+Graphics card is a GeForce 9800 GTX+ which is considered a [[http://us.download.nvidia.com/XFree86/Linux-x86/195.36.24/README/supportedchips.html|supported GPU]] by nVidia.
+
+  - Install nVidia drivers: <code># sudo aptitude install nvidia-kernel-dkms nvidia-glx build-essential nvidia-settings nvidia-xconfig</code>
+  - Run the nVidia configuration utility: <code># nvidia-xconfig</code>
+  - Blacklist the Nouveau drivers: <code>
+# sudo sh -c "echo 'blacklist nouveau' >> /etc/modprobe.d/blacklist-nouveau.conf"
+# sudo aptitude remove --purge xserver-xorg-video-nouveau libdrm-nouveau1a
+</code> (Accept the prompt to remove package //xserver-xorg-video-all//.)
+  - Reboot: <code># sudo shutdown -r now</code>
+
+Source: http://forums.linuxmint.com/viewtopic.php?f=191&t=82424
+
+==== Software RAID ====
+
+=== Prepare Drives ===
+  - Use fdisk to create appropriate partitions: <code># sudo fdisk /dev/sdX</code>
+  - Create a new primary partition using defaults.
+  - Change the partition's system ID using "Linux Raid autodetect" (hex code "fd").
+  - Write table and exit.
+  - Repeat for each drive that will make up the array.
+
+=== Create RAID ===
+  - Install mdadm: <code># sudo aptitude install mdadm</code> (Select "all" for the 'array required for root filesystem' option.)
+  - Create the array: <code># sudo mdadm -v --create /dev/md0 --level=raid10 --raid-devices=4 /dev/sdc1 /dev/sdd1 /dev/sde1 /dev/sdf1</code>
+  - Disk syncing will begin and may take several hours. Use the following to monitor progress: <code># watch cat /proc/mdstat</code> If syncing does not begin immediately, manually start the process: <code># sudo mdadm --readwrite /dev/md0</code>
+  - Add the array information to mdadm.conf: <code># sudo sh -c 'mdadm --examine --scan --config=mdadm.conf >> /etc/mdadm/mdadm.conf'</code>
+  - Use GParted to partition and format the array. I use the following method because a msdos partition does not support anything larger than 2TB.
+    - Select the array from the drop down menu. It should be /dev/md0.
+    - Device > Create Partition Table
+    - Expand "Advanced" and select "GPT"
+    - Format the partition as ext4
+  - Edit /etc/fstab to mount array automatically at boot: <file>
+/dev/md0p1	/home	ext4	defaults		0	0
+</file>
+  - Update permissions on the array partition: <code># sudo chown bradfrank /dev/md0p1
+# sudo chmod 644 /dev/md0p1</code>
+  - Temporarily mount the array to copy contents of /home: <code># sudo mkdir /mnt/home
+# sudo mount /dev/md0p1 /mnt/home
+# sudo rsync -axvS /home/. /mnt/home/.
+</code>
+  - Restart: <code># sudo shutdown -r now</code>
+
+Sources:
+  * http://kromey.us/2009/08/raid-10-with-mdadm-65.html
+  * https://help.ubuntu.com/community/Partitioning/Home/Moving
+  * http://www.linuxhomenetworking.com/wiki/index.php/Quick_HOWTO_:_Ch26_:_Linux_Software_RAID
+  * http://www.ducea.com/2009/03/08/mdadm-cheat-sheet/
+==== Customizations ====
+
+=== Fonts ===
+  - Install TrueType Fonts: <code>
+sudo aptitude install ttf-mscorefonts-installer
+sudo defoma-app purge libwmf0.2-7
+sudo fc-cache -f -v
+</code>
+
+=== Wallpapers ===
+Collected [[http://www.franklybrad.com/f/mint-backgrounds.tar.gz | backgrounds]] from Linux Mint 8 through 12.
+
+
+==== Additional Software ====
+
+<code># su -c 'echo "deb http://repository.spotify.com stable non-free" >> /etc/apt/sources.list'
+# su -c 'echo "deb http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list'
+# sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4E9CFF4E
+# wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+# sudo aptitude update
+# sudo aptitude install spotify-client-qt devede handbrake-gtk easytag mp3gain google-chrome-stable synapse dropbox shotwell calibre screen guake keepassx virtualbox sabnzbdplus bluefish ssh vim
+# wget -P ~/Downloads/ http://dl.google.com/linux/direct/google-musicmanager-beta_current_amd64.deb
+# sudo dpkg -i ~/Downloads/google-musicmanager-beta_current_amd64.deb
+</code>
+
+Sources:
+  * [[https://www.spotify.com/us/download/previews/]]
+  * [[https://music.google.com]]

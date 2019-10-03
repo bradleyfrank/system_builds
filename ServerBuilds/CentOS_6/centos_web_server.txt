@@ -1,0 +1,239 @@
+CentOS 6 Web Server
+
+CentOS is Red Hat Enterprise Linux without the branding and support. There is, however, a lot of community support behind the distribution, and plenty of documentation. As with any distro, it's completely free as in beer.
+
+Throughout this article we will be editing config files. My editor of choice is vi[m], but you're welcome to use whichever one you prefer (e.g. pico, nano, emacs). Further reading: http://www.uic.edu/depts/accc/software/unixgeneral/vi101.html.
+
+
+
+INSTALLATION
+
+Obtain the most recent copy of CentOS at http://www.centos.org/modules/tinycontent/index.php?id=30. Make a bootable CD, DVD or flash drive. [http://red.ht/Oz9tr9] (You can use this URL to perform a netinstall: http://mirrors.seas.harvard.edu/centos/6.3/os/x86_64/)
+
+Partition your drive as needed. I selected "Use All Space" and used the subsequent default options. [http://red.ht/Oz9Em7]
+
+The hostname can be anything you like, in the format "<your-hostname>.<your-domain>.<tld>".
+
+Select "Minimal" install, in order to start with a mostly blank slate (just barebones packages installed). Then select "Customize now" and check "Base" under "Base System".
+
+
+
+SYSTEM CONFIGURATION
+
+Connecting to the Network
+
+Run ifconfig to find the network device name and MAC address. [http://red.ht/UDhcb4] Use the MAC address to give your server a static IP address or DHCP reservation, in order to setup port forwarding on your router (port 80 is for web traffic, and port 443 is for SSL or HTTPS). Make the following changes to your network device configuration file, substituting your own network information.
+
+Edit: /etc/sysconfig/network-scripts/ifcfg-<device>
+DEVICE=<device>
+HWADDR=<mac address>
+NM_CONTROLLED=no
+BOOTPROTO=none
+ONBOOT=yes
+TYPE=Ethernet
+PEERDNS=yes
+IPADDR=192.168.1.10
+NETMASK=255.255.255.0
+GATEWAY=192.168.1.1
+
+[http://red.ht/Swi6Zo]
+
+Edit: /etc/resolv.conf
+search <your-domain>.<tld>
+nameserver 192.168.1.1
+
+Edit: /etc/sysconfig/network
+NETWORKING=yes
+HOSTNAME=<your-hostname>.<your-domain>.<tld>
+
+Edit: /etc/hosts
+192.168.1.10	<your-hostname>.<your-domain>.<tld>		<your-hostname>
+127.0.0.1	    localhost localhost.localdomain	localhost4 localhost4.localdomain4
+::1		        localhost localhost.localdomain	localhost6 localhost6.localdomain6
+
+Now run "service network restart".
+
+
+Adding Repositories and Updating the System
+
+EPEL (Extra Packages for Enterprise Linux) [https://fedoraproject.org/wiki/About_EPEL]
+
+# rpm --import http://mirror.centos.org/centos/RPM-GPG-KEY-CentOS-6
+# rpm --import https://fedoraproject.org/static/0608B895.txt
+# rpm -ivh http://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm
+# rpm -ivh http://yum.postgresql.org/9.1/redhat/rhel-6-i386/pgdg-centos91-9.1-4.noarch.rpm
+
+Now you can update your system with "yum update".
+
+
+Syncing the Clock
+
+# chkconfig ntpd on
+# service ntpd start
+
+chkconfig is used to start programs at boot. Use the following command to verify at what runlevels an individual program starts: chkconfig <service> --list. [http://red.ht/RzdpNf]
+
+
+Creating a User
+
+# groupadd webadmin
+# useradd -g webadmin <username>
+# passwd <username>
+# visudo
+## Allow root to run any commands anywhere
+root           ALL=(ALL)       ALL
+<username>     ALL=(ALL)       ALL
+
+
+Configuring SSH
+
+SSH comes pre-installed, but we need to configure and secure it.
+
+Edit: /etc/ssh/sshd_config
+PermitRootLogin no
+Port <your-ssh-port>
+AllowUsers <username>
+
+[http://wiki.centos.org/HowTos/Network/SecuringSSH]
+
+
+Configuring the Firewall
+
+Before restarting the SSH daemon, iptables, the resident firewall, needs to be configured. Existing rules are flushed, and all incoming and outgoing traffic is blocked, save for three services: HTTP, HTTPS, and SSH.
+
+# iptables -P INPUT ACCEPT
+# iptables -F
+# iptables -A INPUT -i lo -j ACCEPT
+# iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+# iptables -A INPUT -p tcp --dport <your-ssh-port> -j ACCEPT
+# iptables -A INPUT -p tcp --dport 9418 -j ACCEPT
+# iptables -A INPUT -p tcp --dport 80 -j ACCEPT
+# iptables -A INPUT -p tcp --dport 443 -j ACCEPT
+# iptables -P INPUT DROP
+# iptables -P FORWARD DROP
+# service iptables save
+# service iptables restart
+# service sshd restart
+
+[http://wiki.centos.org/HowTos/Network/IPTables]
+
+
+Logwatch
+
+Edit: /etc/logwatch/conf/logwatch.conf
+MailTo = <email-address>
+
+
+
+WEB SERVER
+
+Install Apache, PHP and PostgreSQL
+
+Apache is the actual webserver. PHP is a scripting language used for creating dynamic pages. Finally, Postgres is the database PHP can read and write to. So we will install the "httpd" package (Apache) along with PHP (and the Postgres PHP module) and Postgres itself.
+
+# yum install httpd php php-pgsql phpPgAdmin postgresql91
+
+Enable and start Apache.
+
+# chkconfig httpd on
+# service httpd start
+
+Initialize, enable, and start Postgres, then, create a root account.
+
+# chkconfig postgresql-9.1 on
+# service postgresql-9.1 initdb
+# service postgresql-9.1 start
+# sudo su - postgres
+# createuser -P
+Enter name of role to add: <username>
+Enter password for new role: 
+Enter it again: 
+Shall the new role be a superuser? (y/n) y
+# exit
+
+The following text files are place-holders. The robots.txt file can be configured to allow or deny search engines from indexing the website, and the php_error_log will be used for capturing PHP errors, in order to keep those errors from being displayed to visitors of the site.
+
+# touch /var/www/html/robots.txt
+# touch /var/log/httpd/php_error_log
+
+Configure phpPgAdmin to only be accessible locally; this enhances its security. 
+
+Edit: /etc/httpd/conf.d/phpPgAdmin.conf
+<Location /phpPgAdmin>
+    Order deny,allow
+    Deny from all
+    Allow from 192.168.1.1/24
+    Allow from 127.0.0.1
+    Allow from ::1
+    # Allow from .example.com
+</Location>
+
+Edit: /etc/phpPgAdmin/config.inc.php
+$conf['servers'][0]['host'] = 'localhost';
+
+Edit: /var/lib/pgsql/9.1/data/pg_hba.conf
+# "local" is for Unix domain socket connections only
+local   all             all                                     md5
+# IPv4 local connections:
+host    all             all             127.0.0.1/32            md5
+# IPv6 local connections:
+host    all             all             ::1/128                 md5
+
+# setsebool -P httpd_can_network_connect_db 1
+
+[http://phppgadmin.sourceforge.net/doku.php?id=faq]
+[http://tag1consulting.com/blog/stop-disabling-selinux]
+
+
+Lastly, PHP needs to be secured.
+
+Edit: /etc/php.ini
+disable_functions = show_source, system, shell_exec, passthru, exec, phpinfo, proc_open, proc_nice
+expose_php = Off
+display_errors = Off
+log_errors = On
+error_log = /var/log/httpd/php_error_log
+register_globals = Off
+magic_quotes_* = Off
+enable_dl = Off
+allow_url_fopen = Off
+date.timezone = America/New_York
+
+expose_php: PHP will not write information about itself to HTTP headers. Reduces the amount of information someone can discover about your PHP installation (i.e. version vulnerabilities).
+open_basedir: Only files inside the given directory will be executed.
+disable_functions: These functions provide access to system resources, parameters, files and information. You may want to leave out phpinfo at first, in case you want to confirm your settings.
+display_errors: This prevents error messages from unintentionally revealing information (such as directory structure) about your web server. Instead, errors are sent to an error log on the server.
+register_globals: Prevents GET and POST variables from being directly available to the entire PHP application.
+magic_quotes: Mainly it just adds to confusion, but can cause problems with certain code. It's also been deprecated.
+enable_dl: Disables the loading of a PHP extension at runtime.
+allow_url_fopen: Only files that reside on the web server can be included; this prevents Remote File Inclusion (RFI) attacks (when someone embeds a URL in an HTTP request hoping that your script is tricked into running theirs).
+
+
+Further Security
+
+# yum install acl fail2ban
+# setfacl -m g:webadmin:rwx /var/www/html/
+
+Edit: /etc/fstab
+root / ext4 defaults,acl 1 1
+
+Edit: /etc/fail2ban/jail.conf
+ignoreip = 127.0.0.1 192.168.1.0/24
+findtime = 30
+
+[ssh-iptables]
+
+enabled  = true
+filter   = sshd
+action   = iptables[name=SSH, port=<your-ssh-port>, protocol=tcp]
+           sendmail-whois[name=SSH, dest=root, sender=fail2ban@<your-domain>.<tld>]
+logpath  = /var/log/secure
+maxretry = 5
+
+# chkconfig fail2ban on
+# service fail2ban start
+
+
+Restart the Server
+
+# shutdown -r now

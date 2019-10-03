@@ -1,0 +1,23 @@
+# NextCloudPi
+
+## Config
+
+Disable data directory permissions check in `config/config.php`:
+
+  ```
+  'check_data_directory_permissions' => false,
+  ```
+
+## Manually generate LetsEncrypt certs:
+
+  1. `sudo certbot -d s.domain.tld --manual --preferred-challenges dns certonly [--force-renewal]`
+  2. Edit `/etc/apache2/sites-enabled/nextcloud.conf`
+  3. Add domain to `trusted_domains` array in `/var/www/nextcloud/config/config.php`.
+  4. Restart services: `sudo service php7.0-fpm apache2 restart`
+
+## Backups
+
+```
+0 3 * * * /usr/local/bin/ncp-backup /srv/backups/nextcloudpi
+0 4 * * * find /srv/backups/nextcloudpi/ -name '*.tar' -mtime +7 -exec rm -rf {} \;
+```

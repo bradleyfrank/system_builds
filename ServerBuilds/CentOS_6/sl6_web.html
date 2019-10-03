@@ -1,0 +1,516 @@
+<h2>LAMP web server running SL6</h2>
+
+
+<h3>Introduction</h3>
+
+<ul>
+<li>I use brackets "[...]" to indicate a variable. Replace the variable with the relevent information specific to your system.</li>
+<li>Unless specified, drop the "www" from your domain name.</li>
+<li>To learn about a particular package or command, you can consult its manual anytime by entering <span class="code">man</span> in front of any command. (To quit the man page, hit "q".)</li>
+<li>[arch] will represent your architecture, most likely i386 or x86_64. The former being 32 bit and the later being 64 bit.
+<li>You will need to prepend <span class="code">sudo</span> to most commands if not working as root (the superuser account). If you are not familiar with su/sudo, <a href="http://wiki.centos.org/TipsAndTricks/BecomingRoot">this page</a> is mandatory reading. (Optionally, also readup on the related 'whereis' command.)</li>
+<li>The <a href="http://wiki.centos.org/">CentOS Wiki</a> is an incredible knowledgebase if you're not familiar with certain concepts.</li>
+</ul>
+
+
+<h4>Installation</h4>
+<p>Make note of your architecture and acquire the installation media of your choice. A CD or DVD is the easiest method, but you can <a href="https://projects.centos.org/trac/livecd/wiki/ImageFlash">create a bootable flash drive</a> as well.</p>
+
+<p>When you get to the package selection screen, uncheck everything, then select "Customize now" and uncheck "Dialup Networking Support" (under "Base System") and "Text Based Internet" (under "Applications").</p>
+
+<p>When your system comes up for the first time, skip the first run screen and log in as 'root' using the password you created.</p>
+
+
+<h4>Services</h4>
+<p>CentOS 5.6 has pared down the default set of services that are run at boot time, but some are still extraneous. Execute <span class="code">chkconfig --list | grep 3:on | less</span> to see a list of services that run at boot. ('grep' parses the output and displays only lines that include "3:on"; the 'less' switch gives us scroll ability with the arrow keys. Hit "q" to get back to a command prompt.) We're only concerned with services that start at run level 3, which is the normal boot mode. <a href="http://en.wikipedia.org/wiki/Runlevel#Red_Hat_Linux_and_Fedora">{Further Reading}</a> We will disable the following services:</p>
+
+<ul>
+<li>bluetooth</li>
+<li>firstboot</li>
+<li>gpm (cut/paste utility and mouse server for virtual consoles)</li>
+<li>hidd (bluetooth HID daemon)</li>
+<li>ip6tables (firewall for IPv6)</li>
+</ul>
+
+<p>Disable services by executing <span class="code">chkconfig [service] off</span> for each service you don't want starting automatically at boot. After installing new packages, services are enabled with 'chkconfig' so they will automatically start at boot; otherwise <span class="code">service [service] start</span> would need to be invoked every time the server is restarted. (By default, chkconfig affects only runlevels 2, 3, 4 and 5.)</p>
+
+
+<h4>Networking</h4>
+<p>If you still need to set up your network settings, there are a couple of files to edit. Run <span class="code">ifconfig</span> to find your appropriate adapter [eth]; it will most likely be eth0 or eth1. The system looks for DNS servers in /etc/resolv.conf. This is required for a static IP address. <a href="http://www.centos.org/docs/5/html/Deployment_Guide-en-US/s1-networkscripts-interfaces.html">{Further Reading}</a></p>
+
+<h5>/etc/sysconfig/network-scripts/ifcfg-[eth]</h5>
+<pre>
+DEVICE=[eth]
+BOOTPROTO=static
+BROADCAST=[Broadcast]
+HWADDR=[MAC address]
+IPADDR=[IP Address]
+IPV6INIT=yes
+IPV6_AUTOCONF=no
+NETMASK=[Subnet mask]
+ONBOOT=yes
+</pre>
+
+<h5>/etc/resolv.conf</h5>
+<pre>
+search [domain.tld]
+nameserver [DNS address]
+nameserver [DNS address]
+</pre>
+
+<p>Your ISP will provide you with a primary and redundant nameserver, but third party DNS is available, such as <a href="http://code.google.com/speed/public-dns/">Google Public DNS</a>, or this value may be your router.</p>
+
+<h5>/etc/sysconfig/network</h5>
+<pre>
+NETWORKING=yes
+NETWORKING_IPV6=no
+HOSTNAME=[hostname].[domain.tld]
+GATEWAY=[Gateway]
+</pre>
+
+<p>Your [hostname] is a name of your choosing. It is limited to 64 characters, including letters, numbers and dashes.</p>
+
+<h5>/etc/hosts</h5>
+<pre>
+[IP Address]    [hostname].[domain.tld]     [hostname]
+127.0.0.1       localhost.localdomain       localhost
+::1             localhost6.localdomain6     localhost6
+</pre>
+
+<p>The line beginning with ::1 is for IPv6; you can ignore it. If you run <span class="code">hostname -f</span> now, the system will give you [hostname].[domain.tld]. This is your <acronym title="Fully Qualified Domain Name">FQDN</acronym>.</p>
+
+
+<h4>Setting up repositories</h4>
+
+<p>CentOS offers six main repositories for installing packages: Base, Updates, Addons, Extras, Plus, Contrib. They can be found in /etc/yum.repos.d/CentOS-Base.repo. These packages are very stable, but are not the most recent. We will install two additional repositories in order to pull the newest PHP, MySQL and phpMyAdmin packages down. If you don't feel comfortable using non-tested packages, omit any instructions that refer to non-CentOS repositories.</p>
+
+<p class="para">The first repository is <acronym title="Extra Packages for Enterprise Linux">EPEL</acronym>. <a href="https://fedoraproject.org/wiki/About_EPEL">{Further Reading}</a> The second is Remi. <a href="http://blog.famillecollet.com/pages/Config-en">{Further Reading}</a> All packages are signed with a GPG key that is used for verification once the package has been downloaded. We need to import the respective keys before installing packages. You should import the local CentOS key even if you are not using the optional repositories.</p>
+
+<pre class="com">
+# rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-sl6
+# rpm --import http://download.fedora.redhat.com/pub/epel/RPM-GPG-KEY-EPEL-6
+</pre>
+
+<p>With that completed, we install the two new repositories. Note: occassionally new versions of EPEL are released!</p>
+
+<pre class="com">
+# rpm -ivh http://download.fedoraproject.org/pub/epel/6/<arch>/epel-release-6-5.noarch.rpm
+# wget -P /etc/yum.repos.d http://rpms.famillecollet.com/enterprise/remi.repo
+</pre>
+
+<p>If for some reason you don't have the wget program, execute <span class="code">yum install wget</span>. If you had to manually setup your network settings, you may need to <span class="code">service network restart</span> first. If you're unsure what the function of the flags (-ivh, -P) used here are, consult the respective man pages.</p>
+
+<p class="para">With EPEL, we use rpm to download and install the repository. Remi works a little different, we download the repository file directly. The result is the same in both instances. If you <span class="code">ls /etc/yum.repos.d -la</span> you will see the new repositories.</p>
+
+<p class="para">We need to make some changes to the repositories now. Although this article does not cover setting up a mail server, if you would like to in the future, you should install Postfix with MySQL support. (So you can make virtual mailboxes and use Postfix Admin, a web-based management tool.) This version of Postfix is not available in the Base CentOS repository, so we need to tell Yum where to find it. At the same time, we are installing PHP and MySQL from Remi, not CentOS, so we'll make similar changes to reflect that. The Postfix change is optional if you (a) don't need a mail server, (b) don't need virtual mailboxes, or (c) aren't worried about replacing Postfix at a later date. The PHP and MySQL changes are optional if you are installing both packages from the official CentOS repositories.</p>
+
+<h5>/etc/yum.repos.d/CentOS-Base.repo</h5>
+<pre>
+[base]
+name=CentOS-$releasever - Base
+mirrorlist=http://mirrorlist.centos.org/?release=$releasever&arch=$basearch&repo=os
+#baseurl=http://mirror.centos.org/centos/$releasever/os/$basearch/
+gpgcheck=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-5
+exclude=postfix* php* mysql*
+
+[updates]
+name=CentOS-$releasever - Updates
+mirrorlist=http://mirrorlist.centos.org/?release=$releasever&arch=$basearch&repo=updates
+#baseurl=http://mirror.centos.org/centos/$releasever/updates/$basearch/
+gpgcheck=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-5
+exclude=postfix* php* mysql*
+</pre>
+
+<p>You'll notice we excluded all packages that begin with "postfix", "php" and "mysql". Now we need to tell Yum where to find the MySQL-enabled Postfix. Do not forget to change the "enabled" flag on the CentOS-Plus repo!</p>
+
+<h5>/etc/yum.repos.d/CentOS-Base.repo</h5>
+<pre>
+[centosplus]
+name=CentOS-$releasever - Plus
+mirrorlist=http://mirrorlist.centos.org/?release=$releasever&arch=$basearch&repo=centosplus
+#baseurl=http://mirror.centos.org/centos/$releasever/centosplus/$basearch/
+gpgcheck=1
+enabled=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-5
+includepkgs=postfix*
+</pre>
+
+<p>Note: "includepkgs" means that Yum will check that repo for the listed packages, and only the listed packages.</p>
+
+<p class="para">Lastly, enable the Remi repo, as it comes disabled by default.</p>
+
+<h5>/etc/yum.repos.d/remi.repo</h5>
+<pre>
+[remi]
+name=Les RPM de remi pour Enterprise Linux $releasever - $basearch
+#baseurl=http://rpms.famillecollet.com/enterprise/$releasever/remi/$basearch/
+mirrorlist=http://rpms.famillecollet.com/enterprise/$releasever/remi/mirror
+enabled=1
+gpgcheck=1
+gpgkey=http://rpms.famillecollet.com/RPM-GPG-KEY-remi
+failovermethod=priority
+</pre>
+
+<p>If you want a pure 64 bit system, you can remove all 32 bit packages.</p>
+
+<pre class="com">
+# yum remove \*.i\?86
+</pre>
+
+<p>To prevent yum from downloading additional non-64 bit packages, we can exclude everything but x86_64. Add the following line to the yum conf file.
+
+<h5>/etc/yum.conf</h5>
+<pre>
+exclude = *.i?86
+</pre>
+
+<h4>Update the system</h4>
+
+<pre class="com">
+# yum update
+</pre>
+
+<p>Install network time protocol and access control lists. NTP keeps your server clock syncronized. <a href="http://support.ntp.org/bin/view/Main/WebHome#Why_is_NTP_Important">{Further Reading}</a> and more <a href="http://www.pool.ntp.org/en/vendors.html#ntp-pool-offer">{Further Reading}</a> ACL gives you granular control of permissions. During this phase we'll install the package and set it up so we can set permissions to the root web directory later on. <a href="http://centos.org/docs/5/html/Deployment_Guide-en-US/s1-acls-setting.html">{Further Reading}</a></p>
+
+<pre class="com">
+# yum install wget
+# yum install ntp
+# chkconfig ntpd on
+# ntpdate pool.ntp.org
+# service ntpd start
+</pre>
+
+<p class="para">ACL needs to be applied to the particular mount points it will be run on, this means editing fstab (file system tab). All you need to do is add "acl" the options list of the appropriate partition.</p>
+
+<p class="para">
+Another important change we'll make to fstab is mounting /tmp as a special filesystem called tmpfs.
+<a href="http://wiki.centos.org/TipsAndTricks/TmpOnTmpfs">{Further Reading}</a>
+</p>
+
+<h5>/etc/fstab</h5>
+<pre>
+# &lt;file system&gt; 		&lt;mount point&gt;   &lt;type&gt;  &lt;options&gt;               &lt;dump&gt;  &lt;pass&gt;
+/dev/VolGroup00/LogVol00	/		ext3	defaults,acl	        1 1
+tmpfs                           /tmp            tmpfs   size=512m,noexec,nosuid 0 0
+</pre>
+
+
+<h4>Adding a user</h4>
+
+<p>By creating a website administration group, it's possible to give multiple users permission to upload and maintain the website. You can give the group any name, I used "webadmin". This method works even if you are the only person administrating the site.</p>
+
+<pre class="com">
+# groupadd [groupname]
+# useradd -G [groupname] [username]
+# passwd [username]
+</pre>
+
+<p>Once you have added a new user, (assumably you) we give the user sudo power. Add an additional line for the new user. Make note, there is a special command for editing the sudoers file, and you never want to edit it directly.</p>
+
+<pre class="com">
+# visudo
+</pre>
+
+<pre>
+## Allow root to run any commands anywhere 
+root		ALL=(ALL)	ALL
+[username]	ALL=(ALL)	ALL
+</pre>
+
+
+<h4>Configuring SSH</h4>
+
+<p>We set up <acronym title="Secure Shell">SSH</acronym> for remote access to the server. You may already be using it, albeit logged in as root. So there are two important changes to make: (a) now that we have created a regular user we disable root SSH access, and (b) change the port SSH listens on. Changing the port is not security in and of itself, and by no means should you rely on that measure alone. <a href="http://wiki.centos.org/HowTos/Network/SecuringSSH">{Further Reading}</a> Select a port above 1024 to serve as your new SSH port, uncomment and/or make the following changes:</p>
+
+<h5>/etc/ssh/sshd_config</h5>
+<pre>
+Port [custom port]
+PermitRootLogin no
+</pre>
+
+
+<h4>Configuring the firewall</h4>
+
+<p>IPTables in depth is far beyond the scope of the article, so I'm going to keep things simple. The end result will be to only allow SSH on the custom port, and HTTP/HTTPS traffic. Any other incoming traffic will be blocked. Outgoing traffic will be allowed. My instructions come from the CentOS wiki. <a href="http://wiki.centos.org/HowTos/Network/IPTables">{Further Reading}</a></p>
+
+<pre class="com">
+# iptables -P INPUT ACCEPT
+# iptables -F
+# iptables -A INPUT -i lo -j ACCEPT
+# iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+# iptables -A INPUT -p tcp --dport [custom port] -j ACCEPT
+# iptables -A INPUT -p tcp --dport 80 -j ACCEPT
+# iptables -A INPUT -p tcp --dport 443 -j ACCEPT
+# iptables -P INPUT DROP
+# iptables -P FORWARD DROP
+# iptables -P OUTPUT ACCEPT
+# service iptables save
+</pre>
+
+
+<h4>Reboot the machine</h4>
+
+<pre class="com">
+# shutdown -r now
+</pre>
+
+<p>Rebooting is a personal choice because I believe it makes logical sense at this juncture. Especially if you are logged in remotely as root. Upon restarting, the hostname is set permanently, SSH settings are applied, and the new firewall rules are activated. If you need to SSH in, remember to use <span class="code">ssh -p [custom port] [username]@www.[domain.tld]</span>.</p>
+
+
+<h4>Installing Apache</h4>
+
+<pre class="com">
+# yum install httpd
+# chkconfig httpd on
+# service httpd start
+# touch /var/www/html/robots.txt
+# wget -P /var/www/html http://www.sourceopen.com/favicon.ico
+# mkdir /var/log/httpd/archive
+# setfacl -m g:[groupname]:rwx /var/www/html/
+</pre>
+
+<p>The robots file is optional, and used for instructing search bots. <a href="http://www.robotstxt.org/robotstxt.html">{Further Reading}</a></p>
+
+<p class="para">You can access your site at http://www.[domain.tld]; if Apache is running, you'll see the default Apache landing page. The quickest way to remove this is <span class="code">touch /var/www/html/index.html</span>. Now your site will be a blank page.</p>
+
+<p class="para">Lastly, now that Apache has created a root web folder, we need to give the web administrator's group access to read, write and modify that directory (i.e. so you can use SFTP to upload files).</p>
+
+
+<h4>Installing PHP</h4>
+
+<pre class="com">
+# yum install php php-mysql php-gd php-mbstring php-mcrypt php-xml php-pspell python26
+# touch /var/log/httpd/php_error_log
+# setfacl -m u:apache:rw /var/log/httpd/php_error_log
+# cp /etc/php.ini /etc/php.ini.default
+</pre>
+
+<p>Included here with the base PHP package are some of the more popular modules. I also recommend ImageMagick if you're going to install some sort of forums (e.g. phpBB, Simple Machines). If you're using Remi repository: <span class="code">yum install ImageMagick2-tools</span>. For the base repository: <span class="code">yum install ImageMagick-tools</span>.</p>
+
+<p class="para">PHP is given its own error log, conveniently located with Apache's logs. In a moment we'll configure PHP and tell it where this log is located. "php_error_log" is my name for the file, if you would like something different, just keep a mental note during the rest of the installation.</p>
+
+<p class="para">php.ini is the main configuration file for PHP. We copy it to make a backup, incase anything happens to it. (If for whatever reason php.ini becomes corrupt, execute <span class="code">rm /etc/php.ini &amp;&amp; cp /etc/php.ini.default /etc/php.ini</span>.) Next, look up the value for your <a href="http://www.php.net/manual/en/timezones.php">appropriate [timezone]</a>; but keep in mind it should ideally be the timezone of the server. Now you're ready to configure PHP. (Some of the following may already be set.)</p>
+
+<h5>/etc/php.ini</h5>
+<pre>
+disable_functions = show_source, system, shell_exec, passthru, exec, phpinfo, proc_open, proc_nice
+expose_php = Off
+error_reporting = E_ALL & ~E_DEPRECATED
+display_errors = Off
+log_errors = On
+error_log = /var/log/httpd/php_error_log
+register_globals = Off
+magic_quotes_* = Off
+enable_dl = Off
+allow_url_* = Off
+date.timezone = [timezone]
+</pre>
+
+<ul>
+<li>disable_functions: These functions provide access to system resources, parameters, files and information. You may want to leave out phpinfo at first, in case you want to confirm your settings.</li>
+<li>expose_php: PHP will not write information about itself to HTTP headers. Reduces the amount of information someone can discover about your PHP installation (i.e. version vulnerabilities).</li>
+<li>display_errors: This prevents error messages from unintentionally revealing information (such as directory structure) about your web server. Instead, errors are sent to an error log on the server.</li>
+<li>register_globals: Prevents GET and POST variables from being directly available to the entire PHP application.</li>
+<li>magic_quotes: Mainly it just adds to confusion, but can cause problems with certain code. It's also been deprecated.</li>
+<li>enable_dl: Disables the loading of a PHP extension at runtime.</li>
+<li>allow_url_include: Prevents remote file access via the include and require statements.</li>
+<li>allow_url_fopen: Only files that reside on the web server can be included; this prevents Remote File Inclusion (RFI) attacks (when someone embeds a URL in an HTTP request hoping that your script is tricked into running theirs).</li>
+</ul>
+
+
+<h4>Installing MySQL</h4>
+
+<pre class="com">
+# yum install mysql-server mysql-devel
+# chkconfig mysqld on
+# service mysqld start
+# mysql_secure_installation
+</pre>
+
+<p>(The default MySQL password is blank.)</p>
+
+<ol>
+<li><span class="code">Set root password? [Y/n]</span> (Y/enter)</li>
+<li><span class="code">Remove anonymous users? [Y/n]</span> (Y/enter)</li>
+<li><span class="code">Disallow root login remotely? [Y/n]</span> (Y/enter)</li>
+<li><span class="code">Remove test database and access to it? [Y/n]</span> (Y/enter)</li>
+<li><span class="code">Reload privilege tables now? [Y/n]</span> (Y/enter)</li>
+</ol>
+
+
+<h4>Installing phpMyAdmin</h4>
+
+<pre class="com">
+# yum install phpMyAdmin
+</pre>
+
+<p>Allow,Deny
+First, all Allow directives are evaluated; at least one must match, or the request is rejected. Next, all Deny directives are evaluated. If any matches, the request is rejected. Last, any requests which do not match an Allow or a Deny directive are denied by default.
+Deny,Allow
+First, all Deny directives are evaluated; if any match, the request is denied unless it also matches an Allow directive. Any requests which do not match any Allow or Deny directives are permitted.</p>
+
+<h5>/etc/httpd/conf.d/phpMyAdmin.conf</h5>
+<pre>
+Alias /phpMyAdmin /usr/share/phpMyAdmin
+Alias /phpmyadmin /usr/share/phpMyAdmin
+&lt;Directory /usr/share/phpMyAdmin/&gt;
+	order deny,allow
+	deny from all
+	allow from 127.0.0.1
+	allow from ::1
+	allow from [IP Address]
+&lt;/Directory&gt;
+</pre>
+
+<p>The alias can be of your choosing. For example, <span class="code">Alias /pma /usr/share/phpMyAdmin</span>. You will need your IP address if you want to limit access to phpMyAdmin. If your server is on your local network, the IP address can be your main workstation, or if the server is hosted elsewhere, you'll need your public IP addressed assigned to you by your ISP.</p>
+
+<p class="para">If you installed phpMyAdmin from the CentOS repository, skip this step. phpMyAdmin 3 (from Remi) has new features that aren't present in version 2 (from CentOS). <a href="http://www.phpmyadmin.net/documentation/#linked-tables">{Further Reading}</a> Here we are setting up privileges to a new user account, the [control user]. You will need to come up with a user name and [password] for the account. <a href="http://wiki.phpmyadmin.net/pma/controluser">{Further Reading}</a> (Do not include "mysql>". That is the MySQL prompt.)</p>
+
+<pre class="com">
+# mysql -u root -p
+mysql> source /usr/share/phpMyAdmin/scripts/create_tables.sql
+mysql> GRANT USAGE ON mysql.* TO '[control user]'@'localhost' IDENTIFIED BY '[password]';
+mysql> GRANT SELECT (
+	Host, User, Select_priv, Insert_priv, Update_priv, Delete_priv,
+	Create_priv, Drop_priv, Reload_priv, Shutdown_priv, Process_priv,
+	File_priv, Grant_priv, References_priv, Index_priv, Alter_priv,
+	Show_db_priv, Super_priv, Create_tmp_table_priv, Lock_tables_priv,
+	Execute_priv, Repl_slave_priv, Repl_client_priv
+	) ON mysql.user TO '[control user]'@'localhost';
+mysql> GRANT SELECT ON mysql.db TO '[control user]'@'localhost';
+mysql> GRANT SELECT ON mysql.host TO '[control user]'@'localhost';
+mysql> GRANT SELECT (Host, Db, User, Table_name, Table_priv, Column_priv) ON mysql.tables_priv TO '[control user]'@'localhost';
+mysql> GRANT SELECT, INSERT, UPDATE, DELETE ON phpmyadmin.* TO '[control user]'@'localhost';
+mysql> quit
+</pre>
+
+<p>Generate a secret <a href="http://www.question-defense.com/tools/phpmyadmin-blowfish-secret-generator">Blowfish [passphrase]</a>. It is used in conjunction with cookie authentication. For the most part you will just need to uncomment lines in the following config file:</p>
+
+<h5>/etc/phpMyAdmin/config.inc.php</h5>
+<pre>
+$cfg['blowfish_secret'] = '[passphrase]';
+
+/* User for advanced features */
+$cfg['Servers'][$i]['controluser'] = '[control user]';
+$cfg['Servers'][$i]['controlpass'] = '[password]';
+
+/* Advanced phpMyAdmin features */
+$cfg['Servers'][$i]['pmadb'] = 'phpmyadmin';
+$cfg['Servers'][$i]['bookmarktable'] = 'pma_bookmark';
+$cfg['Servers'][$i]['relation'] = 'pma_relation';
+$cfg['Servers'][$i]['table_info'] = 'pma_table_info';
+$cfg['Servers'][$i]['table_coords'] = 'pma_table_coords';
+$cfg['Servers'][$i]['pdf_pages'] = 'pma_pdf_pages';
+$cfg['Servers'][$i]['column_info'] = 'pma_column_info';
+$cfg['Servers'][$i]['history'] = 'pma_history';
+$cfg['Servers'][$i]['tracking'] = 'pma_tracking';
+$cfg['Servers'][$i]['designer_coords'] = 'pma_designer_coords';
+$cfg['Servers'][$i]['userconfig'] = 'pma_userconfig';
+</pre>
+
+<p>The next part is completely optional for anyone. I install a new phpMyAdmin theme, something a bit more pleasing to the eye and minimalistic. You should always double check the file versions before downloading - there may be a new version available. After installing, you can manually set the theme by adding a line to the phpMyAdmin config file.<a href="http://www.phpmyadmin.net/home_page/themes.php">{Further Reading}</a></p>
+
+<pre class="com">
+# wget -P /tmp http://downloads.sourceforge.net/project/phpmyadmin/themes/clearview3/3.1/clearview3-3.1.zip
+# unzip -d /usr/share/phpMyAdmin/themes /tmp/clearview3-3.1.zip
+# cp /usr/share/phpMyAdmin/themes/darkblue_orange/img/{s_sync.png,s_replication.png,eye.png} /usr/share/phpMyAdmin/themes/clearview3/img/
+</pre>
+
+<h5>/etc/phpMyAdmin/config.inc.php</h5>
+<pre>
+/* Contrib / Swekey authentication */
+// $cfg['Servers'][$i]['auth_swekey_config'] = '/etc/swekey-pma.conf';
+
+/* Set default theme */
+$cfg['ThemeDefault'] = 'clearview3';
+</pre>
+
+
+<h4>Installing AWStats</h4>
+
+<p>Web stats are not required, and thus optional, but it's nice to have graphical data about your website. From the AWStats website: "AWStats is a free powerful and featureful tool that generates advanced web, streaming, ftp or mail server statistics, graphically." We will set it up to generate graphical web statistics. <a href="http://awstats.sourceforge.net/">{Further Reading}</a></p>
+
+<pre class="com">
+# yum install awstats
+# cp /etc/awstats/awstats.localhost.localdomain.conf /etc/awstats/awstats.www.[domain.tld].conf
+</pre>
+
+<h5>/etc/awstats/awstats.www.[domain.tld].conf</h5>
+<pre>
+SiteDomain="[domain.tld]"
+HostAliases="[domain.tld] localhost 127.0.0.1 REGEX[^.*[domain.tld]$]"
+BuildReportFormat=xhtml
+</pre>
+
+<p>Edit the following config file to make custom permissions to AWStats.</p>
+
+<h5>/etc/httpd/conf.d/awstats.conf</h5>
+<pre>
+&lt;Directory "/usr/share/awstats/wwwroot"&gt;
+    Options None
+    AllowOverride None
+    Order deny,allow
+    Deny from all
+    Allow from 127.0.0.1
+    Allow from [IP Address]
+&lt;/Directory&gt;
+</pre>
+
+<p>Lastly, run AWStats to get the initial page up and running.</p>
+
+<pre class="com">
+# /usr/share/awstats/wwwroot/cgi-bin/awstats.pl -update -config=www.[domain.tld]
+</pre>
+
+
+<h4>Restart Apache</h4>
+
+<pre class="com">
+# service httpd restart
+</pre>
+
+<p>Now all of your PHP, MySQL and phpMyAdmin configurations are activated.</p>
+<ul>
+<li>phpMyAdmin: http://www.[domain.tld]/phpmyadmin/</li>
+<li>AWStats: http://www.[domain.tld]/awstats/awstats.pl?config=www.[domain.tld].</li>
+</ul>
+
+<p>If you receive an Internal Server Error of 500, SELinux is preventing awstats.pl from running. By default, SELinux policy prevents httpd from executing CGI scripts. Fix it with <span class="code">chcon -t httpd_sys_script_exec_t /usr/share/awstats/wwwroot/cgi-bin/awstats.pl</span> (then restart the Apache service again).</p>
+
+
+<h4>Installing Postfix</h4>
+
+<pre class="com">
+# yum remove sendmail
+# yum install postfix
+# chkconfig postfix on
+# service postfix start
+</pre>
+
+
+<h4>Configuring Logwatch and Logrotate</h4>
+
+<h5>/etc/logwatch/conf/logwatch.conf</h5>
+<pre>
+Detail = 5
+</pre>
+
+<h5>/etc/logrotate.d/httpd</h5>
+<pre>
+/var/log/httpd/*log {
+    missingok
+    notifempty
+    daily
+    rotate 7
+    olddir /var/log/httpd/archive
+    sharedscripts
+    prerotate
+        /usr/share/awstats/wwwroot/cgi-bin/awstats.pl -update -config=www.[domain.tld]
+    endscript
+    postrotate
+        /sbin/service httpd reload > /dev/null 2>/dev/null || true
+    endscript
+}
+</pre>
