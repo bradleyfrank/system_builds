@@ -1,11 +1,18 @@
 ---
-# tasks file for ./roles/fedora
+- name: Get desktop environment
+  gather_facts: true
+  vars:
+    desktop: "{{ lookup('env','XDG_CURRENT_DESKTOP')|lower }}"
+
+- name: Load desktop environment variables
+  include_vars: "{{ desktop }}.yml"
 
 - include_tasks: repos.yml
 
 - name: Install packages
-  dnf:
-    name: "{{ default_packages }}"
+  become: yes
+  package:
+    name: "{{ packages }} + {{ de_packages }}"
     state: present
 
 - include_tasks: dconf.yml

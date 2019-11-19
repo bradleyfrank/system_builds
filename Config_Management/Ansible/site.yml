@@ -1,6 +1,2 @@
 ---
-- name: Configure Fedora Workstation
-  hosts: localhost
-  become: true
-  roles:
-    - workstation
+- import_playbook: workstation.yml

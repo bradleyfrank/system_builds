@@ -1,75 +1,71 @@
 ---
-# defaults file for ./roles/fedora
-
-default_packages:
-  - 'adobe-source-*-fonts'
-  - augeas
-  - bluefish
-  - docker
+packages:
+  - abcde
+  - adobe-source-*-fonts
+  - borgbackup
+  - dnf-plugin-system-upgrade
+  - dnf-utils
   - expect
   - fail2ban
+  - fdupes
   - ffmpeg
-  - gedit-plugin-bookmarks
-  - gedit-plugin-bracketcompletion
-  - gedit-plugin-charmap
-  - gedit-plugin-codecomment
-  - gedit-plugin-colorpicker
-  - gedit-plugin-colorschemer
-  - gedit-plugin-commander
-  - gedit-plugin-dashboard
-  - gedit-plugin-drawspaces
-  - gedit-plugin-findinfiles
-  - gedit-plugin-git
-  - gedit-plugin-joinlines
-  - gedit-plugin-multiedit
-  - gedit-plugin-smartspaces
-  - gedit-plugin-synctex
-  - gedit-plugin-terminal
-  - gedit-plugin-textsize
-  - gedit-plugin-wordcompletion
-  - gedit-plugins-data
+  - figlet
+  - fish
+  - foliate
+  - fontconfig-enhanced-defaults
+  - fontconfig-font-replacements
+  - fwupd
   - ghostscript
   - ghostwriter
-  - git
   - glances
-  - gnome-shell-extension-dash-to-dock
-  - gnome-shell-extension-system-monitor-applet
-  - gnome-tweaks
   - google-chrome-stable
+  - google-noto-emoji-color-fonts
   - hstr
   - htop
+  - iftop
+  - joplin
+  - keepassxc
+  - keychain
   - libmp4v2
   - libreoffice
   - libreoffice-gallery-vrt-network-equipment
+  - libvirt-client
+  - libxcrypt-compat
+  - makemkv
+  - makepasswd
   - mediawriter
   - mkvtoolnix
-  - mosh
   - most
   - mpv
   - mtr
-  - 'nautilus-dropbox*'
   - ncdu
+  - neofetch
+  - nextcloud-client
   - nmap
   - p7zip
   - p7zip-plugins
+  - par
   - perf
-  - powerline-fonts
+  - picard
+  - podman
   - python3
   - python3-devel
-  - ranger
+  - remmina
   - reptyr
-  - screenfetch
+  - ruby
   - seahorse
+  - ShellCheck
+  - solaar
   - spotify-client
   - stow
   - strace
   - system-config-printer
-  - thefuck
-  - tldr
+  - tlp
+  - tmux
+  - torbrowser-launcher
   - tree
   - vim
-  - vivaldi-stable
   - vlc
-  - 'wine*'
   - wget
   - xz
+  - youtube-dl
