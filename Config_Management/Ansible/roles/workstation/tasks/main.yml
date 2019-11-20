@@ -1,6 +1,6 @@
 ---
+
 - name: Get desktop environment
-  gather_facts: true
   vars:
     desktop: "{{ lookup('env','XDG_CURRENT_DESKTOP')|lower }}"
 
