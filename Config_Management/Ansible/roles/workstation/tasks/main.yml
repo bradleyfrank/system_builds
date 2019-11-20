@@ -1,13 +1,11 @@
 ---
 
-- name: Get desktop environment
-  set_fact:
-    desktop: "{{ lookup('env','XDG_CURRENT_DESKTOP')|lower }}"
-
 - name: Load desktop environment variables
   include_vars: "{{ desktop }}.yml"
 
-- include_tasks: repos.yml
+- name: Install repos
+  import_tasks: repos.yml
+  become: yes
 
 - name: Install packages
   become: yes
@@ -15,4 +13,5 @@
     name: "{{ packages }} + {{ de_packages }}"
     state: present
 
-- include_tasks: dconf.yml
+- name: Configure desktop environment
+  import_tasks: "{{ desktop }}.yml"
