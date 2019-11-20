@@ -1,4 +1,5 @@
 ---
+
 - name: Workstation
   hosts: localhost
   gather_facts: true

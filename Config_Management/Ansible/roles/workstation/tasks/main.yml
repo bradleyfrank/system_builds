@@ -1,7 +1,7 @@
 ---
 
 - name: Get desktop environment
-  vars:
+  set_fact:
     desktop: "{{ lookup('env','XDG_CURRENT_DESKTOP')|lower }}"
 
 - name: Load desktop environment variables
