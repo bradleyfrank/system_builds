@@ -88,3 +88,26 @@ python_packages:
   - pylint
   - tmuxp
   - tuir
+
+my_git_projects:
+  - dotfiles
+  - bootstraps
+  - bradleyfrank.github.io
+  - scripts_archive
+  - system_builds
+  - dl-reddit-top
+  - dotfiles-minimal
+  - docker-server
+  - appeals
+
+vscode_extensions:
+  - bitzl.vscode-puppet
+  - haaaad.ansible
+  - ms-azuretools.vscode-docker
+  - redhat.vscode-yaml
+  - rogalmic.bash-debug
+  - shd101wyy.markdown-preview-enhanced
+  - timonwong.shellcheck
+  - Tyriar.sort-lines
+  - donjayamanne.githistory
+  - mikestead.dotenv

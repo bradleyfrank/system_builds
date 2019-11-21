@@ -13,13 +13,16 @@
     name: "{{ sys_packages }} + {{ de_packages }}"
     state: present
 
+- name: Configure desktop environment
+  import_tasks: "{{ desktop }}.yml"
+
 - name: Install Python packages
   pip:
     name: "{{ python_packages }}"
     extra_args: --user
 
-- name: Setup dotfiles
+- name: Setup home environment
   import_tasks: "dotfiles.yml"
 
-- name: Configure desktop environment
-  import_tasks: "{{ desktop }}.yml"
+- name: Setup development environment
+  import_tasks: "devenv.yml"

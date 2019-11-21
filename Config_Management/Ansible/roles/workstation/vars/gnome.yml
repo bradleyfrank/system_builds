@@ -16,3 +16,8 @@ de_packages:
   - mpv
   - nextcloud-client-nautilus
   - transmission-gtk
+
+gnome_extensions:
+  - 779 # clipboard manager
+  - 1160 # dash to panel
+  - 1218 # printers

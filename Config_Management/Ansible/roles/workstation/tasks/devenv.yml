@@ -1,0 +1,25 @@
+---
+
+- name: Create projects folder
+  file:
+    path: "{{ homedir }}/Projects"
+    state: directory
+    mode: '0750'
+
+- name: Create symlink to projects folder
+  file:
+    src: "{{ homedir }}/Projects"
+    dest: "{{ homedir }}/Development"
+    state: link
+
+- name: Clone projects
+  git:
+    repo: "https://github.com/bradleyfrank/{{ item }}.git"
+    dest: "{{ homedir }}/.dotfiles"
+    version: master
+  with_items: "{{ my_git_projects }}"
+
+- name: Install VSCode extensions
+  command:
+    cmd: "/usr/bin/codium --install-extension {{ item }}"
+  wite_items: "{{ vscode_extensions }}"

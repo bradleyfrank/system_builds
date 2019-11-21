@@ -1,5 +1,9 @@
 ---
 
+- name: Install Gnome extensions
+  command:
+    cmd: "{{ homedir }}/.dotfiles/bin/.local/bin/install_gnome_extensions {{ gnome_extensions | join(' ') }}"
+
 - name: Enable Night Light
   dconf:
     key: /org/gnome/settings-daemon/plugins/color/night-light-enabled
