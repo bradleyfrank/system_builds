@@ -5,13 +5,21 @@
 
 - name: Install repos
   import_tasks: repos.yml
-  become: yes
+  become: True
 
-- name: Install packages
-  become: yes
+- name: Install OS packages
+  become: True
   package:
-    name: "{{ packages }} + {{ de_packages }}"
+    name: "{{ sys_packages }} + {{ de_packages }}"
     state: present
+
+- name: Install Python packages
+  pip:
+    name: "{{ python_packages }}"
+    extra_args: --user
+
+- name: Setup dotfiles
+  import_tasks: "dotfiles.yml"
 
 - name: Configure desktop environment
   import_tasks: "{{ desktop }}.yml"

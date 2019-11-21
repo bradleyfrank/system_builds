@@ -1,0 +1,29 @@
+---
+
+- name: Clone dotfiles repo
+  git:
+    repo: "https://github.com/bradleyfrank/dotfiles.git"
+    dest: "{{ homedir }}/.dotfiles"
+    version: master
+
+- name: Ignore executable bit changes in dotfiles repo
+  git_config:
+    name: core.fileMode
+    repo: "{{ homedir }}/.dotfiles"
+    scope: local
+    value: "false"
+
+- name: Create post-merge script in dotfiles repo
+  copy:
+    content: |
+      chmod 700 ./ssh
+      chmod 700 ./ssh/.ssh
+      chmod 600 ./ssh/.ssh/authorized_keys
+      chmod 600 ./ssh/.ssh/config
+      chmod 775 ./bin/.local/bin/*
+    dest: "{{ homedir }}/.dotfiles/.git/hooks/post-merge"
+    mode: '0750'
+
+- name: Stow dotfiles
+  command:
+    cmd: "{{ homedir }}/.dotfiles/bin/.local/bin/my-stow -b"
