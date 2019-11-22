@@ -8,8 +8,6 @@ de_packages:
   - gedit-plugin-git
   - gedit-plugin-joinlines
   - gedit-plugin-multiedit
-  - gnome-shell-extension-dash-to-dock
-  - gnome-shell-extension-system-monitor-applet
   - gnote
   - libgnome-keyring
   - meld
