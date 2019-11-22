@@ -25,6 +25,7 @@ sys_packages:
   - ghostscript
   - ghostwriter
   - glances
+  - gnome-shell-extension-system-monitor-applet
   - google-chrome-stable
   - google-noto-emoji-color-fonts
   - hstr
