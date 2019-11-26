@@ -24,23 +24,24 @@
     dest: "{{ homedir }}/.ssh/deploy_key"
     mode: 0600
 
-- name: Load GitHub deploy key
-  command:
-    cmd: "ssh-add {{ homedir }}/.ssh/deploy_key"
-  changed_when: "ssh-add -l | grep -q 'Temporary Ansible bootstrapping SSH key'"
+# - name: Load GitHub deploy key
+#   command:
+#     cmd: "ssh-add {{ homedir }}/.ssh/deploy_key"
+#   changed_when: "ssh-add -l | grep -q 'Temporary Ansible bootstrapping SSH key'"
 
 - name: Clone projects
   git:
     repo: "git@github.com:bradleyfrank/{{ item }}.git"
     dest: "{{ homedir }}/Projects/{{ item }}"
+    key_file: "{{ homedir }}/.ssh/deploy_key"
     version: master
     accept_hostkey: True
   with_items: "{{ my_git_projects }}"
 
-- name: Unload GitHub deploy key
-  command:
-    cmd: "ssh-add -d {{ homedir }}/.ssh/deploy_key"
-  changed_when: "ssh-add -l | grep -vq 'Temporary Ansible bootstrapping SSH key'"
+# - name: Unload GitHub deploy key
+#   command:
+#     cmd: "ssh-add -d {{ homedir }}/.ssh/deploy_key"
+#   changed_when: "ssh-add -l | grep -vq 'Temporary Ansible bootstrapping SSH key'"
 
 - name: Remove GitHub deploy key
   file:

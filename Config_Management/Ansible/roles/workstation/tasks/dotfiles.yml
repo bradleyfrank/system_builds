@@ -5,6 +5,7 @@
     repo: "https://github.com/bradleyfrank/dotfiles.git"
     dest: "{{ homedir }}/.dotfiles"
     version: master
+    force: True
     accept_hostkey: True
 
 - name: Ignore executable bit changes in dotfiles repo
