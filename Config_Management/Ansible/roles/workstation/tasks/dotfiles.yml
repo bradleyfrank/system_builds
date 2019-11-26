@@ -6,6 +6,7 @@
     dest: "{{ homedir }}/.dotfiles"
     version: master
     force: True
+    track_submodules: True
     accept_hostkey: True
 
 - name: Ignore executable bit changes in dotfiles repo

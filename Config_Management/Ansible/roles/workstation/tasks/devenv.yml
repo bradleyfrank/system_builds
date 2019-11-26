@@ -35,6 +35,7 @@
     dest: "{{ homedir }}/Projects/{{ item }}"
     key_file: "{{ homedir }}/.ssh/deploy_key"
     version: master
+    track_submodules: True
     accept_hostkey: True
   with_items: "{{ my_git_projects }}"
 
