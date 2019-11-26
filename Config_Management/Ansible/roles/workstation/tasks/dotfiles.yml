@@ -1,5 +1,11 @@
 ---
 
+- name: Create ~/.ssh directory
+  file:
+    path: "{{ homedir }}/.ssh"
+    state: directory
+    mode: '0700'
+
 - name: Clone dotfiles repo
   git:
     repo: "https://github.com/bradleyfrank/dotfiles.git"
@@ -26,6 +32,10 @@
       chmod 775 ./bin/.local/bin/*
     dest: "{{ homedir }}/.dotfiles/.git/hooks/post-merge"
     mode: '0750'
+
+- name: Apply Git post-merge script
+  command:
+    cmd: "pushd {{ homedir }}/.dotfiles ; ./.git/hooks/post-merge ; popd"
 
 - name: Stow dotfiles
   command:
