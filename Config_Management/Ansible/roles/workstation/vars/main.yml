@@ -1,7 +1,7 @@
 ---
 
 desktop: "{{ lookup('env','XDG_CURRENT_DESKTOP')|lower }}"
-homedir: "/home/{{ localuser }}"
+homedir: "{{ ansible_env.HOME }}"
 
 sys_packages:
   - abcde
