@@ -12,14 +12,47 @@
     dest: "{{ homedir }}/Development"
     state: link
 
+- name: Ensure ~/.ssh directory exists
+  file:
+    path: "{{ homedir }}/.ssh"
+    state: directory
+    mode: 0700
+
+- name: Install GitHub deploy key
+  copy:
+    src: github
+    dest: "{{ homedir }}/.ssh/deploy_key"
+    mode: 0600
+
+- name: Load GitHub deploy key
+  command:
+    cmd: "ssh-add {{ homedir }}/.ssh/deploy_key"
+  changed_when: "ssh-add -l | grep -q 'Temporary Ansible bootstrapping SSH key'"
+
 - name: Clone projects
   git:
-    repo: "https://github.com/bradleyfrank/{{ item }}.git"
-    dest: "{{ homedir }}/.dotfiles"
+    repo: "git@github.com:bradleyfrank/{{ item }}.git"
+    dest: "{{ homedir }}/Projects/{{ item }}"
     version: master
+    accept_hostkey: True
   with_items: "{{ my_git_projects }}"
+
+- name: Unload GitHub deploy key
+  command:
+    cmd: "ssh-add -d {{ homedir }}/.ssh/deploy_key"
+  changed_when: "ssh-add -l | grep -vq 'Temporary Ansible bootstrapping SSH key'"
+
+- name: Remove GitHub deploy key
+  file:
+    path: "{{ homedir }}/.ssh/deploy_key"
+    state: absent
 
 - name: Install VSCode extensions
   command:
     cmd: "/usr/bin/codium --install-extension {{ item }}"
   wite_items: "{{ vscode_extensions }}"
+
+- name: Install Python packages
+  pip:
+    name: "{{ python_packages }}"
+    extra_args: --user

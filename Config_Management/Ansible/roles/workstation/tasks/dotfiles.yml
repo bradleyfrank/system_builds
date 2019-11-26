@@ -26,4 +26,4 @@
 
 - name: Stow dotfiles
   command:
-    cmd: "{{ homedir }}/.dotfiles/bin/.local/bin/my-stow -b"
+    cmd: "{{ homedir }}/.dotfiles/bin/.local/bin/stow-dotfiles -b"
