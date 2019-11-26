@@ -50,7 +50,7 @@
 - name: Install VSCode extensions
   command:
     cmd: "/usr/bin/codium --install-extension {{ item }}"
-  wite_items: "{{ vscode_extensions }}"
+  with_items: "{{ vscode_extensions }}"
 
 - name: Install Python packages
   pip:
