@@ -17,5 +17,3 @@ de_packages:
 
 gnome_extensions:
   - 779 # clipboard manager
-  - 1160 # dash to panel
-  - 1218 # printers

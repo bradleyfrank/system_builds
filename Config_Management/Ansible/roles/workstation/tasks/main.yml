@@ -13,11 +13,11 @@
     name: "{{ sys_packages }} + {{ de_packages }}"
     state: present
 
-- name: Setup desktop environment
-  import_tasks: "{{ desktop }}.yml"
-
 - name: Setup home environment
   import_tasks: "dotfiles.yml"
 
 - name: Setup development environment
   import_tasks: "devenv.yml"
+
+- name: Setup desktop environment
+  import_tasks: "{{ desktop }}.yml"
