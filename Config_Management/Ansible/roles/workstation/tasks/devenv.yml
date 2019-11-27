@@ -20,7 +20,7 @@
 
 - name: Install GitHub deploy key
   copy:
-    src: github
+    src: assets/github
     dest: "{{ homedir }}/.ssh/deploy_key"
     mode: 0600
 
