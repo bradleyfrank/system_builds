@@ -8,6 +8,9 @@ de_packages:
   - gedit-plugin-git
   - gedit-plugin-joinlines
   - gedit-plugin-multiedit
+  - gnome-shell-extension-auto-move-windows
+  - gnome-shell-extension-dash-to-dock
+  - gnome-shell-extension-system-monitor-applet
   - gnote
   - libgnome-keyring
   - meld
@@ -16,4 +19,5 @@ de_packages:
   - transmission-gtk
 
 gnome_extensions:
-  - 779 # clipboard manager
+  - 779 # clipboard-indicator
+  - 1011 # dynamic-panel-transparency
