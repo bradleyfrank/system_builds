@@ -168,29 +168,29 @@ docker network create nextcloud
 ### Traefik
 
 ```bash
-mkdir -p /nas0/appdata/traefik/acme
-touch /nas0/appdata/traefik/acme/acme.json
-chmod 0600 /nas0/appdata/traefik/acme/acme.json
-cd /srv/docker/container-apps/traefik && docker-compose up -d
+touch /srv/docker/container-apps/traefik2/acme.json
+chmod 0600 /srv/docker/container-apps/traefik2/acme.json
+cd /srv/docker/container-apps/traefik2 && docker-compose up -d
 ```
 
 ### Nextcloud
 
 ```bash
 cd /opt/docker/compose/nextcloud && docker-compose up -d
-# make Nextcloud aware of https proxy
+# First run only, make Nextcloud aware of https proxy:
 sed -i \
   -e "/'overwrite.cli.url'/a \  'overwriteprotocol' => 'https'," \
   -e "s/'overwrite.cli.url' => 'http:/'overwrite.cli.url' => 'https:/" \
-  /srv/appdata/nextcloud/config/config.php
+  /nas0/appdata/nextcloud/config/config.php
 sudo docker exec -it nextcloud service apache2 restart
 ```
 
 ### Plex
 
+First run only:
 1. Get Plex claim code: https://www.plex.tv/claim
 2. Update `plex/docker-compose` with claim code
 
 ```bash
-cd /opt/docker/compose/plex && docker-compose up -d
+cd /srv/docker/container-apps/plex && docker-compose up -d
 ```
