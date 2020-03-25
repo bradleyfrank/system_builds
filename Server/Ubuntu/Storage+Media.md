@@ -23,7 +23,10 @@ systemctl restart sshd
 
 ```bash
 ufw default allow outgoing ; ufw default deny incoming
-ufw allow ssh ; ufw allow http ; ufw allow https
+ufw allow ssh && \
+  ufw allow http && \
+  ufw allow https && \
+  ufw allow nfs
 ufw enable
 ufw logging on
 ```
