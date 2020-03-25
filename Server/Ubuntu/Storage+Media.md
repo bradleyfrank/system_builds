@@ -107,7 +107,7 @@ zpool create -f nas0 \
     ata-HGST_HDN724040ALE640_PK2338P4H4Y7AC
 ```
 
-Create the ZFS file systems.
+Create the ZFS file systems:
 
 ```bash
 # appdata
@@ -132,6 +132,16 @@ zfs create nas0/temp/transcode
 zfs create nas0/homes
 zfs create nas0/homes/bfrank
 ```
+
+Enable NFS sharing on datasets:
+
+```bash
+zfs set sharenfs=on nas0/userdata/media
+zfs set sharenfs=on nas0/userdata/family
+zfs set sharenfs=on nas0/userdata/software
+zfs set sharenfs=on nas0/userdata/7030726e
+```
+
 
 ## Containers
 
