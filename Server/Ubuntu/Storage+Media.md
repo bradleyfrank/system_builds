@@ -26,7 +26,8 @@ ufw default allow outgoing ; ufw default deny incoming
 ufw allow ssh && \
   ufw allow http && \
   ufw allow https && \
-  ufw allow nfs
+  ufw allow nfs && \
+  ufw allow samba
 ufw enable
 ufw logging on
 ```
@@ -47,6 +48,7 @@ apt install -y \
   ncdu \
   nmap \
   pciutils \
+  samba \
   ssmtp \
   strace \
   trash-cli \
@@ -136,10 +138,10 @@ zfs create nas0/homes/bfrank
 Enable NFS sharing on datasets:
 
 ```bash
-zfs set sharenfs=on nas0/userdata/media
-zfs set sharenfs=on nas0/userdata/family
-zfs set sharenfs=on nas0/userdata/software
-zfs set sharenfs=on nas0/userdata/7030726e
+zfs set sharenfs=on sharesmb=on nas0/userdata/media
+zfs set sharenfs=on sharesmb=on nas0/userdata/family
+zfs set sharenfs=on sharesmb=on nas0/userdata/software
+zfs set sharenfs=on sharesmb=on nas0/userdata/7030726e
 ```
 
 
