@@ -159,7 +159,10 @@ useradd \
 	--uid 10000 \
 	--gid 10000 \
 	nasuser
-chmod 2775 nas0/userdata/*
+
+# Fix ownership on userdata shares
+find /nas0/userdata -type d -exec chmod 2775 {} \;
+chown -R nasuser:nasuser /nas0/userdata
 
 # Create Samba shares config file
 mkdir /etc/samba/smb.conf.d
@@ -203,6 +206,9 @@ EOF
 
 # Add 'include' to main Samba config file
 echo -e "\ninclude = /etc/samba/smb.conf.d/user.conf" >> /etc/samba/smb.conf
+
+# Restart services
+systemctl restart smbd nmbd
 ```
 
 
