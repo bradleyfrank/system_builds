@@ -174,7 +174,8 @@ cat << EOF > /etc/samba/smb.conf.d/user.conf
   guest ok = yes
   read only = no
   force user = nasuser
-  force create mode = 0711
+  force create mode = 0775
+  force directory mode = 2775
 
 [media]
   comment = Media
@@ -183,7 +184,8 @@ cat << EOF > /etc/samba/smb.conf.d/user.conf
   guest ok = yes
   read only = no
   force user = nasuser
-  force create mode = 0711
+  force create mode = 0775
+  force directory mode = 2775
 
 [software]
   comment = Software
@@ -192,7 +194,8 @@ cat << EOF > /etc/samba/smb.conf.d/user.conf
   guest ok = yes
   read only = no
   force user = nasuser
-  force create mode = 0711
+  force create mode = 0775
+  force directory mode = 2775
 
 [family]
   comment = Family Media
@@ -201,7 +204,8 @@ cat << EOF > /etc/samba/smb.conf.d/user.conf
   guest ok = yes
   read only = no
   force user = nasuser
-  force create mode = 0711
+  force create mode = 0775
+  force directory mode = 2775
 EOF
 
 # Add 'include' to main Samba config file
