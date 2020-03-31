@@ -48,9 +48,12 @@ apt install -y \
   ncdu \
   nmap \
   pciutils \
+  rename \
   samba \
+  sshfs \
   ssmtp \
   strace \
+  stow \
   trash-cli \
   tmux \
   unzip \
@@ -135,17 +138,77 @@ zfs create nas0/homes
 zfs create nas0/homes/bfrank
 ```
 
-Enable NFS sharing on datasets:
+Enable NFS and Samba sharing on datasets:
 
 ```bash
-zfs set sharenfs=on sharesmb=on nas0/userdata/media
-zfs set sharenfs=on sharesmb=on nas0/userdata/family
-zfs set sharenfs=on sharesmb=on nas0/userdata/software
-zfs set sharenfs=on sharesmb=on nas0/userdata/7030726e
+zfs set sharenfs=on nas0/userdata/media
+zfs set sharenfs=on nas0/userdata/family
+zfs set sharenfs=on nas0/userdata/software
+zfs set sharenfs=on nas0/userdata/7030726e
+```
+
+Configure Samba:
+
+```bash
+# Make generic user account to own file storage
+groupadd --gid 10000 nasuser
+useradd \
+	--comment "Default NFS/SMB user" \
+	--no-create-home \
+	--shell /usr/sbin/nologin \
+	--uid 10000 \
+	--gid 10000 \
+	nasuser
+chmod 2775 nas0/userdata/*
+
+# Create Samba shares config file
+mkdir /etc/samba/smb.conf.d
+cat << EOF > /etc/samba/smb.conf.d/user.conf
+[7030726e]
+  comment = 7030726e Media
+  path = /nas0/userdata/7030726e
+  browseable = no
+  guest ok = yes
+  read only = no
+  force user = nasuser
+  force create mode = 0711
+
+[media]
+  comment = Media
+  path = /nas0/userdata/media
+  browseable = yes
+  guest ok = yes
+  read only = no
+  force user = nasuser
+  force create mode = 0711
+
+[software]
+  comment = Software
+  path = /nas0/userdata/software
+  browseable = yes
+  guest ok = yes
+  read only = no
+  force user = nasuser
+  force create mode = 0711
+
+[family]
+  comment = Family Media
+  path = /nas0/userdata/family
+  browseable = yes
+  guest ok = yes
+  read only = no
+  force user = nasuser
+  force create mode = 0711
+EOF
+
+# Add 'include' to main Samba config file
+echo -e "\ninclude = /etc/samba/smb.conf.d/user.conf" >> /etc/samba/smb.conf
 ```
 
 
 ## Containers
+
+Install and run Docker:
 
 ```bash
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
@@ -155,12 +218,16 @@ apt install -y containerd.io docker-ce docker-ce-cli docker-compose
 systemctl enable --now docker
 ```
 
+Checkout Git repo of composer files:
+
 ```bash
 ssh-keygen -t rsa -b 4096 -N "" -C "$(uname -n)" -f /root/.ssh/id_rsa
-# add deploy key to repo
+# [add deploy key to GitHub repo]
 mkdir -p /srv/docker && cd /srv/docker
 git clone git@github.com:bradleyfrank/container-apps.git
 ```
+
+Create internal Docker networks:
 
 ```bash
 docker network create proxy
@@ -179,7 +246,7 @@ cd /srv/docker/container-apps/traefik2 && docker-compose up -d
 
 ```bash
 cd /opt/docker/compose/nextcloud && docker-compose up -d
-# First run only, make Nextcloud aware of https proxy:
+# First run only, make Nextcloud aware of https proxy
 sed -i \
   -e "/'overwrite.cli.url'/a \  'overwriteprotocol' => 'https'," \
   -e "s/'overwrite.cli.url' => 'http:/'overwrite.cli.url' => 'https:/" \
@@ -195,4 +262,19 @@ First run only:
 
 ```bash
 cd /srv/docker/container-apps/plex && docker-compose up -d
+```
+
+## Backups
+
+Create a Borg repository on remote host (i.e. Synology):
+
+```bash
+borg init \
+  --encryption=repokey \
+  --remote-path /usr/local/bin/borg \
+  nas:/volume1/Backups/nas0/userdata
+borg create \
+  --remote-path /usr/local/bin/borg \
+  nas:/volume1/Backups/nas0/userdata::"$(date +%A)" \
+  /nas0/userdata
 ```
