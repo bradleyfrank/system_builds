@@ -215,6 +215,19 @@ echo -e "\ninclude = /etc/samba/smb.conf.d/user.conf" >> /etc/samba/smb.conf
 systemctl restart smbd nmbd
 ```
 
+## Setup Mail
+
+```bash
+cat << EOF > /etc/ssmtp/ssmtp.conf
+root=bradfrank@fastmail.com
+mailhub=smtp.fastmail.com:465
+hostname=deep-thought.francopuccini.casa
+AuthUser=bradfrank@fastmail.com
+AuthPass=
+UseTLS=YES
+UseSTARTTLS=NO
+EOF
+```
 
 ## Containers
 
