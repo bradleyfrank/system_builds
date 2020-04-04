@@ -59,7 +59,8 @@ apt install -y \
   unzip \
   vim \
   wget \
-  zfsutils-linux 
+  zfsutils-linux \
+  zfs-auto-snapshot
 ```
 
 ```bash
@@ -80,6 +81,30 @@ chronyc makestep
 ```bash
 sed -i 's/#Storage=auto/Storage=persistent/' /etc/systemd/journald.conf
 systemctl restart systemd-journald.service
+
+cat << EOF > /etc/logrotate.d/borg
+/var/log/borg/*.log {
+  rotate 4
+  weekly
+  compress
+  missingok
+  notifempty
+}
+EOF
+```
+
+## Mail
+
+```bash
+cat << EOF > /etc/ssmtp/ssmtp.conf
+root=<email-address>
+mailhub=<email-smtp:port>
+hostname=<fqdn>
+AuthUser=<email-username>
+AuthPass=<email-password>
+UseTLS=<YES|NO>
+UseSTARTTLS=<YES|NO>
+EOF
 ```
 
 ## Data Structure
@@ -130,12 +155,33 @@ zfs create nas0/userdata/7030726e
 # databases
 zfs create nas0/db
 zfs create nas0/db/nextcloud
-# temp
-zfs create nas0/temp
-zfs create nas0/temp/transcode
-# homes
-zfs create nas0/homes
-zfs create nas0/homes/bfrank
+# caches
+zfs create nas0/cache
+zfs create nas0/cache/transcode
+zfs create nas0/cache/nextcloud
+```
+
+Configure ZFS snapshots:
+
+```bash
+# appdata
+zfs set com.sun:auto-snapshot=true nas0/appdata
+zfs set com.sun:auto-snapshot:monthly=true nas0/appdata
+zfs set com.sun:auto-snapshot:weekly=true nas0/appdata
+zfs set com.sun:auto-snapshot:daily=true nas0/appdata
+zfs set com.sun:auto-snapshot:hourly=true nas0/appdata
+zfs set com.sun:auto-snapshot:frequent=false nas0/appdata
+# userdata
+zfs set com.sun:auto-snapshot=true nas0/userdata
+zfs set com.sun:auto-snapshot:monthly=true nas0/userdata
+zfs set com.sun:auto-snapshot:weekly=true nas0/userdata
+zfs set com.sun:auto-snapshot:daily=true nas0/userdata
+zfs set com.sun:auto-snapshot:hourly=true nas0/userdata
+zfs set com.sun:auto-snapshot:frequent=false nas0/userdata
+# databases
+zfs set com.sun:auto-snapshot=false nas0/db
+# caches
+zfs set com.sun:auto-snapshot=false nas0/cache
 ```
 
 Enable NFS and Samba sharing on datasets:
@@ -215,26 +261,12 @@ echo -e "\ninclude = /etc/samba/smb.conf.d/user.conf" >> /etc/samba/smb.conf
 systemctl restart smbd nmbd
 ```
 
-## Setup Mail
-
-```bash
-cat << EOF > /etc/ssmtp/ssmtp.conf
-root=bradfrank@fastmail.com
-mailhub=smtp.fastmail.com:465
-hostname=deep-thought.francopuccini.casa
-AuthUser=bradfrank@fastmail.com
-AuthPass=
-UseTLS=YES
-UseSTARTTLS=NO
-EOF
-```
-
 ## Containers
 
 Install and run Docker:
 
 ```bash
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
 add-apt-repository \
  "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
 apt install -y containerd.io docker-ce docker-ce-cli docker-compose
@@ -274,7 +306,7 @@ sed -i \
   -e "/'overwrite.cli.url'/a \  'overwriteprotocol' => 'https'," \
   -e "s/'overwrite.cli.url' => 'http:/'overwrite.cli.url' => 'https:/" \
   /nas0/appdata/nextcloud/config/config.php
-sudo docker exec -it nextcloud service apache2 restart
+docker exec -it nextcloud service apache2 restart
 ```
 
 ### Plex
