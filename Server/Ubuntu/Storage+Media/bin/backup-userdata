@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 
 _script_name="userdata-backup"
+
+_tmp_log="$(mktemp)"
 _log_file="/var/log/borg/${_script_name}.log"
 
 _email_address="bradfrank@fastmail.com"
@@ -17,25 +19,36 @@ info() {
 fail_and_exit() {
   info "$*"
   send_email "$_script_name failed"
+  save_log
   exit 1
 }
 
 send_email() {
-  # Ensure email credentials exist then read in to script
-  if [[ ! -r /root/.email-credentials ]]; then
-    info "Error: unable to read email credentials"
-    return 1
-  fi
-
   # Set email subject line
   local _email_header
   _email_header=$(printf "%s\n" "Subject: $1")
 
   # Combine subject + body
-  printf '%s\n\n%s' "$_email_header" "$(<"$_log_file")" > "$_log_file"
+  local _email_body
+  _email_body="$(mktemp)"
+  printf '%s\n\n%s' "$_email_header" "$(<"$_tmp_log")" > "$_email_body"
 
   # Send email with ssmtp
-  ssmtp "$_email_address" < "$_log_file"
+  ssmtp "$_email_address" < "$_email_body"
+
+  # cleanup
+  rm "$_email_body"
+}
+
+save_log() {
+  # Add a blank line for readability
+  printf '\n' >> "$_log_file"
+
+  # Append this backup log to main log file
+  cat "$_tmp_log" >> "$_log_file"
+
+  # Remove temporary log file
+  rm "$_tmp_log"
 }
 
 
@@ -54,7 +67,7 @@ borg create                           \
     --remote-path /usr/local/bin/borg \
     ::'{now}'                         \
     /nas0/userdata                    \
-    > "$_log_file" 2>&1
+    >> "$_tmp_log" 2>&1
 _backup_exit=$?
 
 # Check that backup finished successfully
@@ -63,7 +76,7 @@ if [[ "$_backup_exit" -gt 0 ]]; then
 fi
 
 # Add a blank line for readability
-printf '\n' >> "$_log_file"
+printf '\n' >> "$_tmp_log"
 
 # Prune to maintain 7 daily, 4 weekly, and 6 monthly backup archives
 info "Pruning old backups..."
@@ -74,7 +87,7 @@ borg prune                            \
     --keep-weekly   4                 \
     --keep-monthly  6                 \
     --remote-path /usr/local/bin/borg \
-    > "$_log_file" 2>&1
+    >> "$_tmp_log" 2>&1
 _prune_exit=$?
 
 # Check that pruning finished successfully
@@ -84,5 +97,7 @@ fi
 
 # End of script - email and quit
 info "Backup script completed."
-
 send_email "$_script_name completed"
+save_log
+
+exit 0
