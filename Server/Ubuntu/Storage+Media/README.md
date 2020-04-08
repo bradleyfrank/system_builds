@@ -50,6 +50,7 @@ apt install -y \
   pciutils \
   rename \
   samba \
+  smartmontools \
   sshfs \
   ssmtp \
   strace \
