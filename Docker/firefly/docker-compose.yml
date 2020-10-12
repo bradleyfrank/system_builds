@@ -1,0 +1,64 @@
+version: '3'
+
+services:
+  ffdb:
+    container_name: ffdb
+    environment:
+      - MARIADB_ROOT_PASSWORD=84ZfXMBuqfnVSP92
+      - MARIADB_DATABASE=firefly
+      - MARIADB_USER=firefly
+      - MARIADB_PASSWORD=ssb2TLJnyJ4FHExL
+    hostname: ffdb
+    networks:
+      - firefly
+    image: mariadb/server:10.3
+    restart: always
+    volumes:
+      - /nas0/db/firefly:/var/lib/mysql
+
+  firefly:
+    container_name: firefly
+    depends_on:
+      - ffdb
+    env_file: .env
+    image: jc5x/firefly-iii:latest
+    hostname: firefly
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.firefly.entrypoints=http"
+      - "traefik.http.routers.firefly.rule=Host(`firefly.francopuccini.casa`)"
+      - "traefik.http.middlewares.firefly-https-redirect.redirectscheme.scheme=https"
+      - "traefik.http.routers.firefly.middlewares=firefly-https-redirect"
+      - "traefik.http.routers.firefly-secure.entrypoints=https"
+      - "traefik.http.routers.firefly-secure.rule=Host(`firefly.francopuccini.casa`)"
+      - "traefik.http.routers.firefly-secure.tls=true"
+      - "traefik.http.routers.firefly-secure.tls.certresolver=http"
+      - "traefik.http.routers.firefly-secure.service=firefly"
+      - "traefik.http.services.firefly.loadbalancer.server.port=80"
+      - "traefik.docker.network=proxy"
+    networks:
+      - proxy
+      - firefly
+    ports:
+      - "8010:80"
+    restart: always
+    volumes:
+      - /nas0/appdata/firefly/export:/var/www/firefly-iii/storage/export
+      - /nas0/appdata/firefly/upload:/var/www/firefly-iii/storage/upload
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+
+  ff-redis:
+    container_name: ff-redis
+    image: redis:5.0
+    networks:
+      - firefly
+    restart: always
+    volumes:
+      - /nas0/cache/firefly:/data
+
+networks:
+  proxy:
+    external: true
+  firefly:
+    external: true

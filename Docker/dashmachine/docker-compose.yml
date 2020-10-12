@@ -1,0 +1,34 @@
+version: '3'
+
+services:
+  dashmachine:
+    container_name: dashmachine
+    environment:
+      - TZ=America/New_York
+    image: rmountjoy/dashmachine:latest
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dashmachine.entrypoints=http"
+      - "traefik.http.routers.dashmachine.rule=Host(`bookmarks.francopuccini.casa`)"
+      - "traefik.http.middlewares.dashmachine-https-redirect.redirectscheme.scheme=https"
+      - "traefik.http.routers.dashmachine.middlewares=dashmachine-https-redirect"
+      - "traefik.http.routers.dashmachine-secure.entrypoints=https"
+      - "traefik.http.routers.dashmachine-secure.rule=Host(`bookmarks.francopuccini.casa`)"
+      - "traefik.http.routers.dashmachine-secure.tls=true"
+      - "traefik.http.routers.dashmachine-secure.tls.certresolver=http"
+      - "traefik.http.routers.dashmachine-secure.service=dashmachine"
+      - "traefik.http.services.dashmachine.loadbalancer.server.port=5000"
+      - "traefik.docker.network=proxy"
+    networks:
+      - proxy
+    ports:
+      - 5000:5000
+    restart: always
+    volumes:
+      - /nas0/appdata/dashmachine:/dashmachine/dashmachine/user_data
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+
+networks:
+  proxy:
+    external: true

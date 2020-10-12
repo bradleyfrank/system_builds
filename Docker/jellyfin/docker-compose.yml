@@ -1,0 +1,35 @@
+version: '3'
+
+services:
+  jellyfin:
+    container_name: jellyfin
+    image: jellyfin/jellyfin
+    environment:
+      - TZ="America/New_York"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.jellyfin.entrypoints=http"
+      - "traefik.http.routers.jellyfin.rule=Host(`jellyfin.francopuccini.casa`)"
+      - "traefik.http.middlewares.jellyfin-https-redirect.redirectscheme.scheme=https"
+      - "traefik.http.routers.jellyfin.middlewares=jellyfin-https-redirect"
+      - "traefik.http.routers.jellyfin-secure.entrypoints=https"
+      - "traefik.http.routers.jellyfin-secure.rule=Host(`jellyfin.francopuccini.casa`)"
+      - "traefik.http.routers.jellyfin-secure.tls=true"
+      - "traefik.http.routers.jellyfin-secure.tls.certresolver=http"
+      - "traefik.http.routers.jellyfin-secure.service=jellyfin"
+      - "traefik.http.services.loadbalancerjellyfin..server.port=8096"
+      - "traefik.docker.network=proxy"
+    networks:
+      - proxy
+    ports:
+      - "8096:8096"
+      - "8920:8920"
+    restart: unless-stopped
+    volumes:
+      - /nas0/appdata/jellyfin:/config
+      - /nas0/temp/transcode:/cache
+      - /nas0/userdata/media:/media
+
+networks:
+  proxy:
+    external: true
